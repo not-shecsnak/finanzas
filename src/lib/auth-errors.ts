@@ -13,6 +13,11 @@ const SIGNUP_MESSAGES: Record<string, string> = {
 
 export const SIGNUP_FALLBACK = "No se pudo crear la cuenta. Inténtalo de nuevo en un momento.";
 
-export function signupErrorMessage(code: string | undefined): string {
-  return (code && SIGNUP_MESSAGES[code]) || SIGNUP_FALLBACK;
+export const CONNECTION_MESSAGE =
+  "No se pudo conectar con Supabase. Revisa que NEXT_PUBLIC_SUPABASE_URL sea la URL del proyecto (https://<id>.supabase.co) y reinicia npm run dev.";
+
+export function signupErrorMessage(code: string | undefined, name?: string, status?: number): string {
+  if (code && SIGNUP_MESSAGES[code]) return SIGNUP_MESSAGES[code];
+  if (name === "AuthRetryableFetchError" || status === 0) return CONNECTION_MESSAGE;
+  return SIGNUP_FALLBACK;
 }

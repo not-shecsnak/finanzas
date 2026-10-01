@@ -32,8 +32,8 @@ export async function signup(_prev: AuthState, formData: FormData): Promise<Auth
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp(parsed.data);
   if (error) {
-    console.error("[signup] código:", error.code, "estado:", error.status);
-    return { error: signupErrorMessage(error.code) };
+    console.error("[signup] código:", error.code, "estado:", error.status, "tipo:", error.name, "mensaje:", error.message);
+    return { error: signupErrorMessage(error.code, error.name, error.status) };
   }
   if (!data.session) return { info: "Revisa tu correo para confirmar la cuenta y luego inicia sesión." };
   redirect("/");
