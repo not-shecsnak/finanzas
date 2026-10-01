@@ -17,7 +17,7 @@ export type FormInitial = {
 };
 
 const fieldClass =
-  "min-h-11 w-full rounded-xl border border-border bg-bg px-4 py-3 text-ink placeholder:text-muted focus-visible:outline-2 focus-visible:outline-accent-soft";
+  "min-h-11 w-full rounded-xl border border-field-border bg-bg px-4 py-3 text-ink placeholder:text-muted focus-visible:outline-2 focus-visible:outline-accent-soft";
 const focusRing = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-soft";
 
 export function TransactionForm({ categories, initial }: { categories: Category[]; initial: FormInitial }) {
@@ -104,7 +104,7 @@ export function TransactionForm({ categories, initial }: { categories: Category[
         <button
           type="submit"
           disabled={pending}
-          className={`min-h-11 flex-1 rounded-xl bg-accent px-4 font-medium text-white disabled:opacity-60 ${focusRing}`}
+          className={`min-h-11 flex-1 rounded-xl bg-accent px-4 font-medium text-on-accent disabled:opacity-60 ${focusRing}`}
         >
           {pending ? "Guardando..." : "Guardar"}
         </button>

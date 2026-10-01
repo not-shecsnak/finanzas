@@ -6,7 +6,7 @@ import { login, signup, type AuthState } from "./actions";
 type Mode = "login" | "signup";
 
 const inputClass =
-  "w-full rounded-xl border border-border bg-bg px-4 py-3 text-ink placeholder:text-muted focus-visible:outline-2 focus-visible:outline-accent-soft";
+  "w-full rounded-xl border border-field-border bg-bg px-4 py-3 text-ink placeholder:text-muted focus-visible:outline-2 focus-visible:outline-accent-soft";
 const focusRing = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-soft";
 
 const COPY: Record<Mode, { submit: string; help: string; autoComplete: string }> = {
@@ -42,7 +42,7 @@ export function LoginForm() {
             aria-selected={mode === m}
             onClick={() => setMode(m)}
             className={`rounded-lg px-3 py-2 text-sm font-medium ${focusRing} ${
-              mode === m ? "bg-accent text-white" : "text-muted"
+              mode === m ? "bg-accent text-on-accent" : "text-muted"
             }`}
           >
             {m === "login" ? "Entrar" : "Crear cuenta"}
@@ -96,7 +96,7 @@ export function LoginForm() {
         <button
           type="submit"
           disabled={pending}
-          className={`rounded-xl bg-accent px-4 py-3 font-medium text-white disabled:opacity-60 ${focusRing}`}
+          className={`rounded-xl bg-accent px-4 py-3 font-medium text-on-accent disabled:opacity-60 ${focusRing}`}
         >
           {pending ? "Un momento..." : copy.submit}
         </button>

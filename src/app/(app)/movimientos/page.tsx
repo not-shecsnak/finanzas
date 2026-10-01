@@ -39,7 +39,7 @@ export default async function Movimientos({
         <label className="sr-only" htmlFor="categoria">
           Filtrar por categoría
         </label>
-        <select id="categoria" name="categoria" defaultValue={categoryId ?? ""} className="min-h-11 flex-1 rounded-xl border border-border bg-bg px-3 text-ink">
+        <select id="categoria" name="categoria" defaultValue={categoryId ?? ""} className="min-h-11 flex-1 rounded-xl border border-field-border bg-bg px-3 text-ink">
           <option value="">Todas las categorías</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
