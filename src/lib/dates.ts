@@ -1,3 +1,5 @@
+import { LOCALE } from "@/lib/config";
+
 const MONTH_RE = /^(\d{4})-(0[1-9]|1[0-2])$/;
 
 /** Mes actual como "YYYY-MM" (hora local del servidor). */
@@ -32,7 +34,7 @@ export function shiftMonth(month: string, delta: number): string {
   return `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, "0")}`;
 }
 
-export function monthLabel(month: string, locale = "es-MX"): string {
+export function monthLabel(month: string, locale = LOCALE): string {
   const { from } = monthRange(month);
   return new Date(`${from}T12:00:00`).toLocaleDateString(locale, { month: "long", year: "numeric" });
 }

@@ -1,9 +1,19 @@
-/** Los montos se guardan como enteros en centavos, nunca como float. */
-export function formatCents(cents: number, locale = "es-MX", currency = "MXN"): string {
+import { CURRENCY, LOCALE } from "@/lib/config";
+
+/**
+ * Los montos se guardan como enteros en centavos, nunca como float.
+ * Muestra decimales solo cuando existen (en COP casi siempre son pesos enteros).
+ */
+export function formatCents(cents: number, locale = LOCALE, currency = CURRENCY): string {
   if (!Number.isInteger(cents)) {
     throw new TypeError("cents debe ser un entero");
   }
-  return new Intl.NumberFormat(locale, { style: "currency", currency }).format(cents / 100);
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency,
+    minimumFractionDigits: cents % 100 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(cents / 100);
 }
 
 const MAX_CENTS = 99_999_999_999; // ~1,000 millones, evita desbordes absurdos

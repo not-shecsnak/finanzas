@@ -2,8 +2,14 @@ import { describe, expect, it } from "vitest";
 import { formatCents, parseToCents } from "./money";
 
 describe("formatCents", () => {
-  it("formatea centavos como moneda", () => {
-    expect(formatCents(123456)).toContain("1,234.56");
+  it("formatea pesos colombianos sin decimales cuando son enteros", () => {
+    const out = formatCents(5000000); // 50.000 COP
+    expect(out).toContain("50.000");
+    expect(out).not.toContain(",00");
+  });
+
+  it("muestra decimales solo si existen", () => {
+    expect(formatCents(123456)).toContain("1.234,56");
   });
 
   it("rechaza valores no enteros", () => {
