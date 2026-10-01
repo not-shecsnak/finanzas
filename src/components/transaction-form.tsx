@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import { saveTransaction, type FormState } from "@/app/(app)/movimientos/actions";
+import { formatAmountTyping } from "@/lib/money";
 import type { Category } from "@/lib/queries";
 import type { Kind } from "@/lib/summary";
 
@@ -22,6 +23,7 @@ const focusRing = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-
 export function TransactionForm({ categories, initial }: { categories: Category[]; initial: FormInitial }) {
   const [state, action, pending] = useActionState<FormState, FormData>(saveTransaction, {});
   const [kind, setKind] = useState<Kind>(initial.kind);
+  const [amount, setAmount] = useState(initial.amount);
   const options = categories.filter((c) => c.kind === kind);
 
   return (
@@ -53,11 +55,15 @@ export function TransactionForm({ categories, initial }: { categories: Category[
           inputMode="decimal"
           autoComplete="off"
           required
-          defaultValue={initial.amount}
-          placeholder="150.50"
-          aria-describedby="form-error"
+          value={amount}
+          onChange={(e) => setAmount(formatAmountTyping(e.target.value))}
+          placeholder="50.000"
+          aria-describedby="amount-help form-error"
           className={`${fieldClass} text-2xl`}
         />
+        <span id="amount-help" className="text-xs">
+          En pesos. Los miles se separan solos; usa coma para decimales (150,50).
+        </span>
       </label>
 
       <label className="flex flex-col gap-1 text-sm text-muted">

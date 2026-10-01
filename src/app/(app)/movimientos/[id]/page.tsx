@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { TransactionForm } from "@/components/transaction-form";
+import { formatAmountInput } from "@/lib/money";
 import { getCategories, LOAD_ERROR, type TxRow } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 import { deleteTransaction } from "../actions";
@@ -29,8 +30,8 @@ export default async function EditarMovimiento({ params }: { params: Promise<{ i
   if (!data) notFound();
   const tx = data as TxRow;
 
-  // Mostrar el monto como texto editable sin usar float: 15050 -> "150.50".
-  const amount = `${Math.trunc(tx.amount_cents / 100)}.${String(tx.amount_cents % 100).padStart(2, "0")}`;
+  // Monto como texto editable en formato colombiano, sin float: 5000000 -> "50.000".
+  const amount = formatAmountInput(tx.amount_cents);
 
   return (
     <main className="flex flex-col gap-6">

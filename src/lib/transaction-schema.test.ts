@@ -16,6 +16,10 @@ describe("transactionSchema", () => {
     expect(r.note).toBe("tacos");
   });
 
+  it("acepta miles con punto", () => {
+    expect(transactionSchema.parse({ ...valid, amount: "50.000" }).amount).toBe(5000000);
+  });
+
   it("deja la nota vacía como null", () => {
     expect(transactionSchema.parse({ ...valid, note: "   " }).note).toBeNull();
   });

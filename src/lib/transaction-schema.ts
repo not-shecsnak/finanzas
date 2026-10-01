@@ -7,7 +7,7 @@ export const transactionSchema = z.object({
   amount: z.string().transform((value, ctx) => {
     const cents = parseToCents(value);
     if (cents === null) {
-      ctx.addIssue({ code: "custom", message: "Monto no válido. Usa solo números, por ejemplo 150.50" });
+      ctx.addIssue({ code: "custom", message: "Monto no válido. Escribe por ejemplo 50000, 50.000 o 150,50" });
       return z.NEVER;
     }
     return cents;
