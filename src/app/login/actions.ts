@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { signupErrorMessage } from "@/lib/auth-errors";
 import { credentialsSchema } from "@/lib/auth-schema";
 import { createClient } from "@/lib/supabase/server";
 
@@ -30,7 +31,10 @@ export async function signup(_prev: AuthState, formData: FormData): Promise<Auth
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp(parsed.data);
-  if (error) return { error: "No se pudo crear la cuenta" };
+  if (error) {
+    console.error("[signup] código:", error.code, "estado:", error.status);
+    return { error: signupErrorMessage(error.code) };
+  }
   if (!data.session) return { info: "Revisa tu correo para confirmar la cuenta y luego inicia sesión." };
   redirect("/");
 }
