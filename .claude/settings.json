@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(gh *)",
+      "Bash(npm test*)",
+      "Bash(npm run*)",
+      "Bash(python3 scripts/*)",
+      "Bash(python scripts/linear_client.py *)",
+      "Bash(git push origin *)",
+      "Bash(bash scripts/*)",
+      "Bash(node tests/*)",
+      "Skill(create-issue *)",
+      "Skill(start-issue *)",
+      "Skill(close-issue *)",
+      "Skill(status)",
+      "Skill(agent-metrics)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash(git commit*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'Reminder: commit message must contain Refs DEMO-XXX'",
+            "timeout": 5000
+          }
+        ]
+      }
+    ]
+  }
+}
