@@ -5,6 +5,11 @@ export function currentMonth(now = new Date()): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
+/** Fecha de hoy como "YYYY-MM-DD" (hora local del servidor). */
+export function todayIso(now = new Date()): string {
+  return `${currentMonth(now)}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
 /** Devuelve un mes válido o el mes actual si el valor es inválido o falta. */
 export function sanitizeMonth(value: string | undefined, now = new Date()): string {
   return value && MONTH_RE.test(value) ? value : currentMonth(now);
