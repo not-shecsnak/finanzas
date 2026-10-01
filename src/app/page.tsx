@@ -1,4 +1,6 @@
+import { logout } from "@/app/login/actions";
 import { formatCents } from "@/lib/money";
+import { createClient } from "@/lib/supabase/server";
 
 const resumen = [
   { etiqueta: "Ingresos", centavos: 0, color: "text-income" },
@@ -6,12 +8,27 @@ const resumen = [
   { etiqueta: "Saldo del mes", centavos: 0, color: "text-ink" },
 ];
 
-export default function Inicio() {
+export default async function Inicio() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return (
     <main className="mx-auto flex min-h-dvh max-w-3xl flex-col gap-6 px-4 py-8">
-      <header>
-        <p className="text-sm text-muted">Hola, Sebastián</p>
-        <h1 className="text-2xl font-semibold">Tus finanzas</h1>
+      <header className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm text-muted">{user?.email}</p>
+          <h1 className="text-2xl font-semibold">Tus finanzas</h1>
+        </div>
+        <form action={logout}>
+          <button
+            type="submit"
+            className="rounded-xl border border-border px-3 py-2 text-sm text-muted focus-visible:outline-2 focus-visible:outline-accent-soft"
+          >
+            Salir
+          </button>
+        </form>
       </header>
 
       <section aria-label="Resumen del mes" className="grid gap-3 sm:grid-cols-3">
