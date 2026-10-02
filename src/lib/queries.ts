@@ -35,3 +35,21 @@ export async function getMonthTransactions(supabase: SupabaseClient, month: stri
   const { data, error } = await query;
   return { transactions: (data ?? []) as TxRow[], error };
 }
+
+export type CardRow = { id: string; name: string; limit_cents: number; statement_day: number; due_day: number };
+export type BalanceRow = { card_id: string; balance_cents: number };
+
+export async function getCards(supabase: SupabaseClient) {
+  const { data, error } = await supabase
+    .from("credit_cards")
+    .select("id, name, limit_cents, statement_day, due_day")
+    .order("created_at");
+  return { cards: (data ?? []) as CardRow[], error };
+}
+
+/** Saldos registrados para un mes "YYYY-MM" (month se guarda como primer día del mes). */
+export async function getCardBalances(supabase: SupabaseClient, month: string) {
+  const { from } = monthRange(month);
+  const { data, error } = await supabase.from("card_balances").select("card_id, balance_cents").eq("month", from);
+  return { balances: (data ?? []) as BalanceRow[], error };
+}
