@@ -24,29 +24,37 @@ export function TransactionForm({ categories, initial }: { categories: Category[
   const [state, action, pending] = useActionState<FormState, FormData>(saveTransaction, {});
   const [kind, setKind] = useState<Kind>(initial.kind);
   const [amount, setAmount] = useState(initial.amount);
+  // Tras un error React 19 resetea los campos no controlados: se repueblan con lo enviado.
+  const sent = state.values;
+  const category = sent?.category_id ?? initial.category_id;
   const options = categories.filter((c) => c.kind === kind);
 
   return (
     <form action={action} className="flex flex-col gap-5">
       {initial.id && <input type="hidden" name="id" value={initial.id} />}
-      <input type="hidden" name="kind" value={kind} />
 
-      <div role="radiogroup" aria-label="Tipo de movimiento" className="grid grid-cols-2 gap-1 rounded-xl border border-border bg-surface p-1">
+      <fieldset className="grid grid-cols-2 gap-1 rounded-xl border border-field-border bg-surface p-1">
+        <legend className="sr-only">Tipo de movimiento</legend>
         {(["expense", "income"] as const).map((k) => (
-          <button
-            key={k}
-            type="button"
-            role="radio"
-            aria-checked={kind === k}
-            onClick={() => setKind(k)}
-            className={`min-h-11 rounded-lg px-3 text-sm font-medium ${focusRing} ${
-              kind === k ? (k === "expense" ? "bg-expense text-bg" : "bg-income text-bg") : "text-muted"
-            }`}
-          >
-            {k === "expense" ? "Gasto" : "Ingreso"}
-          </button>
+          <label key={k} className="relative">
+            <input
+              type="radio"
+              name="kind"
+              value={k}
+              checked={kind === k}
+              onChange={() => setKind(k)}
+              className="peer absolute inset-0 h-full w-full cursor-pointer opacity-0"
+            />
+            <span
+              className={`flex min-h-11 items-center justify-center rounded-lg px-3 text-sm font-medium text-muted peer-checked:text-bg peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent-soft ${
+                k === "expense" ? "peer-checked:bg-expense" : "peer-checked:bg-income"
+              }`}
+            >
+              {k === "expense" ? "Gasto" : "Ingreso"}
+            </span>
+          </label>
         ))}
-      </div>
+      </fieldset>
 
       <label className="flex flex-col gap-1 text-sm text-muted">
         Monto
@@ -72,7 +80,7 @@ export function TransactionForm({ categories, initial }: { categories: Category[
           key={kind}
           name="category_id"
           required
-          defaultValue={options.some((c) => c.id === initial.category_id) ? initial.category_id : ""}
+          defaultValue={options.some((c) => c.id === category) ? category : ""}
           className={fieldClass}
         >
           <option value="" disabled>
@@ -88,12 +96,12 @@ export function TransactionForm({ categories, initial }: { categories: Category[
 
       <label className="flex flex-col gap-1 text-sm text-muted">
         Fecha
-        <input name="occurred_on" type="date" required defaultValue={initial.occurred_on} className={fieldClass} />
+        <input name="occurred_on" type="date" required defaultValue={sent?.occurred_on ?? initial.occurred_on} className={fieldClass} />
       </label>
 
       <label className="flex flex-col gap-1 text-sm text-muted">
         Nota (opcional)
-        <input name="note" maxLength={200} defaultValue={initial.note} placeholder="Tacos con amigos" className={fieldClass} />
+        <input name="note" maxLength={200} defaultValue={sent?.note ?? initial.note} placeholder="Tacos con amigos" className={fieldClass} />
       </label>
 
       <p id="form-error" role="alert" className="min-h-5 text-sm text-expense">

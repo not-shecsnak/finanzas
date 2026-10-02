@@ -33,15 +33,14 @@ export function LoginForm() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div role="tablist" aria-label="Acceso" className="grid grid-cols-2 gap-1 rounded-xl border border-border bg-surface p-1">
+      <div role="group" aria-label="Acceso" className="grid grid-cols-2 gap-1 rounded-xl border border-field-border bg-surface p-1">
         {(["login", "signup"] as const).map((m) => (
           <button
             key={m}
             type="button"
-            role="tab"
-            aria-selected={mode === m}
+            aria-pressed={mode === m}
             onClick={() => setMode(m)}
-            className={`rounded-lg px-3 py-2 text-sm font-medium ${focusRing} ${
+            className={`min-h-11 rounded-lg px-3 py-2 text-sm font-medium ${focusRing} ${
               mode === m ? "bg-accent text-on-accent" : "text-muted"
             }`}
           >
@@ -61,6 +60,7 @@ export function LoginForm() {
             name="email"
             type="email"
             autoComplete="email"
+            defaultValue={state.email}
             required
             aria-describedby={state.error ? "auth-error" : "auth-help"}
             aria-invalid={state.error ? true : undefined}

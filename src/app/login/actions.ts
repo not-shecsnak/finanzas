@@ -5,7 +5,13 @@ import { signupErrorMessage } from "@/lib/auth-errors";
 import { credentialsSchema } from "@/lib/auth-schema";
 import { createClient } from "@/lib/supabase/server";
 
-export type AuthState = { error?: string; info?: string };
+/** `email` se devuelve para repoblar el campo tras un error; la contraseña nunca. */
+export type AuthState = { error?: string; info?: string; email?: string };
+
+function sentEmail(formData: FormData): string {
+  const v = formData.get("email");
+  return typeof v === "string" ? v : "";
+}
 
 function parse(formData: FormData) {
   return credentialsSchema.safeParse({
@@ -16,24 +22,24 @@ function parse(formData: FormData) {
 
 export async function login(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const parsed = parse(formData);
-  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  if (!parsed.success) return { error: parsed.error.issues[0].message, email: sentEmail(formData) };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   // Mensaje genérico: no revela si el correo existe.
-  if (error) return { error: "Correo o contraseña incorrectos" };
+  if (error) return { error: "Correo o contraseña incorrectos", email: sentEmail(formData) };
   redirect("/");
 }
 
 export async function signup(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const parsed = parse(formData);
-  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  if (!parsed.success) return { error: parsed.error.issues[0].message, email: sentEmail(formData) };
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp(parsed.data);
   if (error) {
     console.error("[signup] código:", error.code, "estado:", error.status, "tipo:", error.name, "mensaje:", error.message);
-    return { error: signupErrorMessage(error.code, error.name, error.status) };
+    return { error: signupErrorMessage(error.code, error.name, error.status), email: sentEmail(formData) };
   }
   if (!data.session) return { info: "Revisa tu correo para confirmar la cuenta y luego inicia sesión." };
   redirect("/");
