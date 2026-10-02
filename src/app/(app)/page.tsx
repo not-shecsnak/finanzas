@@ -16,7 +16,7 @@ export default async function Inicio({ searchParams }: { searchParams: Promise<{
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ transactions, error: txError }, { categories, error: catError }] = await Promise.all([
+  const [{ transactions, error: txError, truncated }, { categories, error: catError }] = await Promise.all([
     getMonthTransactions(supabase, month),
     getCategories(supabase),
   ]);
@@ -52,6 +52,11 @@ export default async function Inicio({ searchParams }: { searchParams: Promise<{
       ) : (
         <>
           <SummaryCards summary={summary} />
+          {truncated && (
+            <p role="alert" className="rounded-2xl border border-expense/40 bg-surface p-4 text-expense">
+              Este mes tiene demasiados movimientos: los totales pueden estar incompletos.
+            </p>
+          )}
 
           <section aria-label="Gasto por categoría" className="rounded-2xl border border-border bg-surface p-4">
             <h2 className="mb-3 font-medium">Gasto por categoría</h2>
