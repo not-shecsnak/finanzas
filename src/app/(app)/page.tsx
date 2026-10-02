@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { logout } from "@/app/login/actions";
 import { AddFab } from "@/components/fab";
@@ -8,6 +9,8 @@ import { formatCents } from "@/lib/money";
 import { getCategories, getMonthTransactions, LOAD_ERROR } from "@/lib/queries";
 import { summarize } from "@/lib/summary";
 import { createClient } from "@/lib/supabase/server";
+
+export const metadata: Metadata = { title: "Inicio" };
 
 export default async function Inicio({ searchParams }: { searchParams: Promise<{ mes?: string }> }) {
   const month = sanitizeMonth((await searchParams).mes);

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { TransactionForm } from "@/components/transaction-form";
@@ -5,6 +6,8 @@ import { formatAmountInput } from "@/lib/money";
 import { getCategories, LOAD_ERROR, type TxRow } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 import { deleteTransaction } from "../actions";
+
+export const metadata: Metadata = { title: "Editar movimiento" };
 
 export default async function EditarMovimiento({
   params,

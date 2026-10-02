@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { z } from "zod";
 import { AddFab } from "@/components/fab";
@@ -8,6 +9,8 @@ import { formatCents } from "@/lib/money";
 import { getCategories, getMonthTransactions, LIST_LIMIT, LOAD_ERROR } from "@/lib/queries";
 import { summarize } from "@/lib/summary";
 import { createClient } from "@/lib/supabase/server";
+
+export const metadata: Metadata = { title: "Movimientos" };
 
 export default async function Movimientos({
   searchParams,
