@@ -29,7 +29,7 @@ En Supabase, Authentication debe permitir registro con correo; si no, el formula
 
 ## Migración de base de datos
 
-El esquema vive en `supabase/migrations/20261001000000_init_schema.sql`, en la rama `feat/PR-3-esquema-supabase-rls` (PR #3, aún sin mergear; no está en la rama donde se escribió este README). Aplícalo pegándolo en el SQL Editor de Supabase o con la CLI de Supabase (no verificado: no se ejecutó la migración).
+El esquema vive en `supabase/migrations/20261001000000_init_schema.sql`, en la rama `feat/PR-3-esquema-supabase-rls` (PR #3, aún sin mergear; no está en la rama donde se escribió este README). Aplícalo pegándolo en el SQL Editor de Supabase. Ya se aplicó en el proyecto del autor (volver a correrla da `42P07: relation "categories" already exists`, lo cual es esperado). Con la CLI de Supabase no se ha probado.
 
 Qué contiene (leído del archivo):
 
@@ -40,7 +40,7 @@ Qué contiene (leído del archivo):
 - RLS activada con una política `for all to authenticated` por tabla (`auth.uid() = user_id`) y `revoke all ... from anon`.
 - Trigger `on_auth_user_created_seed_categories` que siembra 8 categorías base (Sueldo, Otros ingresos, Comida, Transporte, Ocio, Estudios, Suscripciones, Otros gastos) al crear cada usuario.
 
-`supabase/tests/rls_check.sql` (misma rama) comprueba el aislamiento entre dos usuarios en una transacción que se revierte; su ejecución real está pendiente. Ver [ADR 0002](docs/adr/0002-montos-en-centavos-y-rls.md).
+`supabase/tests/rls_check.sql` (misma rama) comprueba el aislamiento entre dos usuarios en una transacción que se revierte. Se validó en un Postgres 16.2 local con un stub mínimo del esquema `auth` (incluido un control negativo que lo hace fallar si se quita RLS); no se ha ejecutado contra el Supabase real. Ver [ADR 0002](docs/adr/0002-montos-en-centavos-y-rls.md).
 
 ## Tests
 

@@ -19,9 +19,11 @@ Feature: [[PR-2]] · Rama `feat/PR-3-esquema-supabase-rls` · PR #3 abierta, sin
 - Trigger `security definer` con `search_path = ''` y `revoke` de ejecución.
 
 ## Verificación
-- El mensaje del commit lo dice: el script de RLS está "sin ejecutar aún". No se ha aplicado la migración ni corrido `rls_check.sql` contra una base real (no verificado).
+- Migración y `rls_check.sql` validados en Postgres 16.2 local (Docker) con un stub mínimo de `auth`: migración sin errores, pruebas OK y control negativo (con RLS desactivado la prueba falla: "B ve 1 movimientos de A").
+- La migración ya está aplicada en el Supabase del autor (volver a correrla da `42P07 ... already exists`). El stub no es Supabase real: `rls_check.sql` no se ha ejecutado allí.
+- El commit original decía "sin ejecutar aún"; quedó desactualizado.
 
 ## Pendientes
-- Aplicar la migración en el proyecto Supabase y ejecutar `rls_check.sql` (en una base de pruebas).
+- Endurecimiento en la rama `fix/PR-7-rls-hardening` (migración `20261002000000_hardening.sql`: kind coherente, privilegios mínimos, índices), validado en local y aún sin aplicar en Supabase.
 - `credit_cards`/`card_balances` no tienen UI hasta [[PR-6]].
 - Finalizar con `/close-issue PR-3` tras el merge.
