@@ -6,7 +6,14 @@ import { getCategories, LOAD_ERROR, type TxRow } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 import { deleteTransaction } from "../actions";
 
-export default async function EditarMovimiento({ params }: { params: Promise<{ id: string }> }) {
+export default async function EditarMovimiento({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const deleteFailed = (await searchParams).error === "eliminar";
   const id = z.uuid().safeParse((await params).id);
   if (!id.success) notFound();
 
@@ -48,7 +55,13 @@ export default async function EditarMovimiento({ params }: { params: Promise<{ i
         }}
       />
 
-      <details className="rounded-2xl border border-border bg-surface p-4">
+      {deleteFailed && (
+        <p role="alert" className="rounded-2xl border border-expense/40 bg-surface p-4 text-expense">
+          No se pudo eliminar el movimiento. Puede que ya no exista; recarga e inténtalo de nuevo.
+        </p>
+      )}
+
+      <details className="rounded-2xl border border-border bg-surface p-4" open={deleteFailed}>
         <summary className="min-h-11 cursor-pointer text-expense">Eliminar movimiento</summary>
         <form action={deleteTransaction} className="mt-3 flex flex-col gap-3">
           <input type="hidden" name="id" value={tx.id} />
