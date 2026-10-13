@@ -25,3 +25,6 @@ Rama `feat/PR-9-aclarar-login` · PR #4 abierta, sin mergear; apilada sobre PR-4
 
 ## Pendientes
 - Finalizar con `/close-issue PR-9` tras el merge.
+
+## Cierre — 2026-10-13T16:54:26Z
+- Gates: 3/3 (intentos: 1) · Agente: unassigned · PR: n/a

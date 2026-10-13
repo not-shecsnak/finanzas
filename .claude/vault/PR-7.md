@@ -35,3 +35,6 @@ Cierre de criterios (`test/PR-7-e2e-ci`):
 - [ ] Revisión OWASP básica documentada (falta el documento).
 - [ ] Confirmar CI en verde en GitHub tras abrir la PR (requiere autorización).
 - Finalizar con `/close-issue PR-7` tras el merge.
+
+## Cierre — 2026-10-13T16:54:13Z
+- Gates: 3/3 (intentos: 1) · Agente: agent-qa-sec · PR: n/a

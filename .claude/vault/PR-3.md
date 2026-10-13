@@ -27,3 +27,6 @@ Feature: [[PR-2]] · Rama `feat/PR-3-esquema-supabase-rls` · PR #3 abierta, sin
 - Endurecimiento en la rama `fix/PR-7-rls-hardening` (migración `20261002000000_hardening.sql`: kind coherente, privilegios mínimos, índices), validado en local y aún sin aplicar en Supabase.
 - `credit_cards`/`card_balances` no tienen UI hasta [[PR-6]].
 - Finalizar con `/close-issue PR-3` tras el merge.
+
+## Cierre — 2026-10-13T16:53:51Z
+- Gates: 3/3 (intentos: 1) · Agente: agent-architect · PR: n/a
