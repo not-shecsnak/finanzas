@@ -22,7 +22,20 @@ jobs:
 
       - run: npm run lint
 
-      - run: npm test
+      # Corre los tests y falla si la cobertura baja del umbral de vitest.config.ts.
+      - name: Tests con cobertura
+        run: npm run test:coverage
+
+      - name: Subir cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          if-no-files-found: ignore
+
+      - name: Auditoria de dependencias
+        run: npm audit --audit-level=high
 
       # Variables ficticias: solo para que compile; no son credenciales reales.
       - name: Build
