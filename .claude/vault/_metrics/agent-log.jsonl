@@ -1,0 +1,5 @@
+{"date": "2026-10-13T16:53:47Z", "ticket": "PR-1", "parent": null, "agent": "unassigned", "task_type": "main", "gates_first_try": true, "cycle_hours": 284.11, "pr_first_review_approved": null}
+{"date": "2026-10-13T16:54:00Z", "ticket": "PR-3", "parent": "PR-2", "agent": "agent-architect", "task_type": "feat", "gates_first_try": true, "cycle_hours": 283.79, "pr_first_review_approved": null}
+{"date": "2026-10-13T16:54:22Z", "ticket": "PR-7", "parent": "PR-2", "agent": "agent-qa-sec", "task_type": "test", "gates_first_try": true, "cycle_hours": 282.69, "pr_first_review_approved": null}
+{"date": "2026-10-13T16:54:35Z", "ticket": "PR-9", "parent": "PR-2", "agent": "unassigned", "task_type": "main", "gates_first_try": true, "cycle_hours": 283.45, "pr_first_review_approved": null}
+{"date": "2026-10-13T16:54:47Z", "ticket": "PR-10", "parent": "PR-2", "agent": "unassigned", "task_type": "main", "gates_first_try": true, "cycle_hours": 282.69, "pr_first_review_approved": null}

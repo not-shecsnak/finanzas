@@ -24,3 +24,6 @@ Rama: `feat/PR-1-bootstrap-del-flujo-hdd` · PR #1 abierta, sin mergear. Feature
 ## Pendientes
 - Mergear la PR #1 (la rama base de la pila).
 - Nota escrita tarde (durante PR-10): ver "Cuándo se escribe cada nota" en `README.md`. Se finaliza (`estado: done`) con `/close-issue PR-1`.
+
+## Cierre — 2026-10-13T16:53:38Z
+- Gates: 3/3 (intentos: 1) · Agente: unassigned · PR: n/a
