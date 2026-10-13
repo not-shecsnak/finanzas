@@ -25,6 +25,8 @@ test("crear, editar y eliminar un gasto se refleja en lista y resumen", async ({
   await expect(page.getByRole("heading", { name: "Editar movimiento" })).toBeVisible();
   const monto = page.getByLabel("Monto");
   await expect(monto).toHaveValue("50.000");
+  await expect(monto).not.toBeFocused(); // el foco automático es solo para altas
+  await expect(page.getByRole("radio", { name: "Comida" })).toBeChecked();
   await monto.fill("75.000");
   await expect(monto).toHaveValue("75.000");
   await page.getByRole("button", { name: "Guardar" }).click();
