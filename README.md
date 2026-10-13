@@ -45,10 +45,13 @@ Qué contiene (leído del archivo):
 ## Tests
 
 ```bash
-npm test      # vitest run
+npm test                # vitest run
+npm run test:coverage   # con cobertura v8 (falla si baja del umbral)
 ```
 
 Cubren lógica pura en `src/lib/*.test.ts`: montos, fechas, resumen, validación de movimientos y de auth, errores de auth y normalización de la URL de Supabase. No hay tests E2E ni de componentes todavía.
+
+También hay tests de integración de las Server Actions (`movimientos`, `credito`, `login`) con un cliente Supabase simulado (`src/test/supabase-mock.ts`): sesión, validación, categoría, filas afectadas por RLS, errores de BD con mensaje genérico y centavos enviados a la base. La cobertura se mide sobre `src/lib` y las acciones; medida actual: líneas 84,22 %, sentencias 84,59 %, ramas 84,38 %, funciones 77,94 %. Umbral en `vitest.config.ts`: 79 % líneas/sentencias/ramas y 72 % funciones; el CI lo exige y sube `coverage/` como artefacto.
 
 ## Estructura
 
