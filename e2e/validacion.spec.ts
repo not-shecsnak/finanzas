@@ -33,7 +33,8 @@ test("movimiento: enviar vacío muestra errores junto a cada campo y no hay peti
   await expect(grupo).toHaveAttribute("aria-describedby", "category-error");
 
   // Sin round-trip: ni una sola petición POST (las Server Actions viajan por POST).
-  await page.waitForTimeout(500);
+  // Espera determinista: dos fotogramas tras el estado visible; una petición habría salido ya.
+  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
   expect(posts).toHaveLength(0);
   await expect(page.getByRole("heading", { name: "Nuevo movimiento" })).toBeVisible();
 
@@ -94,6 +95,12 @@ test("el servidor sigue validando: categoría de ingreso en un gasto es rechazad
   await expect(page.getByLabel("Nota (opcional)")).toHaveValue("Nota que debe sobrevivir");
   await expect(page.getByRole("radio", { name: "Comida" })).toBeChecked();
   await expect(page.getByRole("radio", { name: "Gasto", exact: true })).toBeChecked();
+
+  // Un nuevo envío bloqueado por el cliente no deja visible el error del servidor anterior.
+  await page.getByLabel("Monto").fill("");
+  await page.getByRole("button", { name: "Guardar", exact: true }).click();
+  await expect(page.locator("#amount-error")).toHaveText(/Monto no válido/);
+  await expect(page.locator("#form-error")).toHaveText("");
 });
 
 test("el servidor sigue validando en modo Ingreso: el tipo y la categoría elegidos sobreviven al error", async ({ page }) => {
@@ -137,7 +144,7 @@ test("tarjeta: enviar vacío muestra un error por campo, sin petición al servid
     expect(await input.getAttribute("aria-describedby")).toContain(`${c.id}-error`);
   }
   await expect(page.getByLabel("Nombre de la tarjeta")).toBeFocused();
-  await page.waitForTimeout(500);
+  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
   expect(posts).toHaveLength(0);
 
   await page.getByLabel("Nombre de la tarjeta").fill("Tarjeta e2e");
