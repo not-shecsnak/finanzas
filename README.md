@@ -80,6 +80,19 @@ docs/adr/                   decisiones de arquitectura
 
 Se guardan como enteros en centavos (nunca float) y se muestran con `es-CO`/`COP` (`$ 50.000`; decimales solo si existen). Al escribir, el campo agrupa miles con punto y la coma marca decimales. Se aceptan `50000`, `50.000`, `1.500.000`, `150,50`, `1.234,56` y `1,234.56`; se rechazan formatos ambiguos como `1,234`, y el máximo es 99.999.999.999 centavos.
 
+## E2E
+
+Playwright + axe (WCAG 2.0/2.1/2.2 AA) contra un Supabase local en puertos propios (`55321`-`55327`, `project_id = "finanzas-e2e"`), sin tocar producción ni otros stacks locales. Requiere Docker.
+
+```bash
+npx supabase@latest start        # aplica supabase/migrations/ (usa supabase/config.toml)
+eval "$(npx supabase@latest status -o env | grep -E '^(API_URL|ANON_KEY)=')"; export NEXT_PUBLIC_SUPABASE_URL="$API_URL" NEXT_PUBLIC_SUPABASE_ANON_KEY="$ANON_KEY"
+npx playwright install chromium && npm run test:e2e   # construye y sirve la app en :3100
+npx supabase@latest stop --no-backup
+```
+
+Las claves salen del entorno del shell, no de archivos. Con `E2E_BASE_URL` se usa un servidor ya levantado. En CI corre `.github/workflows/e2e.yml`.
+
 ## Flujo de trabajo (HDD)
 
 Linear (tickets `PR-N`) + GitHub (código) + gates mecánicos. Detalle en `CLAUDE.md`.
