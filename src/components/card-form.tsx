@@ -1,52 +1,147 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useState, type FormEvent, type ReactNode } from "react";
 import { saveCard, type FormState } from "@/app/(app)/credito/actions";
+import { cardSchema } from "@/lib/credit-schema";
+import { fieldErrors, firstInvalidField, pickFormFields, withoutError, type FieldErrors } from "@/lib/form-validation";
 import { formatAmountTyping } from "@/lib/money";
 
+/** Campos en el orden en que aparecen en pantalla (para enfocar el primero inválido). */
+const FIELD_ORDER = ["name", "limit", "statement_day", "due_day"] as const;
+
 const fieldClass =
-  "min-h-11 w-full rounded-xl border border-muted bg-bg px-4 py-3 text-ink placeholder:text-muted focus-visible:outline-2 focus-visible:outline-accent-soft";
+  "min-h-11 w-full rounded-xl border border-muted bg-bg px-4 py-3 text-ink placeholder:text-muted focus-visible:outline-2 focus-visible:outline-accent-soft aria-invalid:border-2 aria-invalid:border-expense";
 const focusRing = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-soft";
+
+function describedBy(...ids: (string | false | undefined)[]): string | undefined {
+  const list = ids.filter(Boolean).join(" ");
+  return list === "" ? undefined : list;
+}
+
+function FieldError({ id, message }: { id: string; message?: string }) {
+  if (!message) return null;
+  return (
+    <p id={id} role="alert" className="text-sm text-expense">
+      {message}
+    </p>
+  );
+}
+
+function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1 text-sm text-muted">
+      <label htmlFor={htmlFor}>{label}</label>
+      {children}
+    </div>
+  );
+}
 
 export function CardForm() {
   const [state, action, pending] = useActionState<FormState, FormData>(saveCard, {});
   const [limit, setLimit] = useState("");
+  const [errors, setErrors] = useState<FieldErrors>({});
+
+  function clearError(name: string) {
+    setErrors((e) => withoutError(e, name));
+  }
+
+  // Misma validación (cardSchema) que la Server Action; si falla, preventDefault evita despacharla.
+  function onSubmit(e: FormEvent<HTMLFormElement>) {
+    const form = e.currentTarget;
+    const data = pickFormFields(new FormData(form), FIELD_ORDER);
+    // Igual que la Server Action: un campo ausente cuenta como texto vacío.
+    const found = fieldErrors(cardSchema, Object.fromEntries(FIELD_ORDER.map((name) => [name, data[name] ?? ""])));
+    setErrors(found);
+    const first = firstInvalidField(found, FIELD_ORDER);
+    if (!first) return;
+    e.preventDefault();
+    const el = form.elements.namedItem(first);
+    if (el instanceof HTMLElement) el.focus();
+  }
 
   return (
-    <form action={action} className="flex flex-col gap-5">
-      <label className="flex flex-col gap-1 text-sm text-muted">
-        Nombre de la tarjeta
-        <input name="name" required maxLength={40} autoComplete="off" placeholder="Mi tarjeta" className={fieldClass} />
-      </label>
-
-      <label className="flex flex-col gap-1 text-sm text-muted">
-        Límite de crédito
+    <form action={action} onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
+      <Field label="Nombre de la tarjeta" htmlFor="name">
         <input
+          id="name"
+          name="name"
+          required
+          aria-required="true"
+          aria-invalid={errors.name ? true : undefined}
+          aria-describedby={describedBy(errors.name && "name-error")}
+          maxLength={40}
+          autoComplete="off"
+          placeholder="Mi tarjeta"
+          onChange={() => clearError("name")}
+          className={fieldClass}
+        />
+        <FieldError id="name-error" message={errors.name} />
+      </Field>
+
+      <Field label="Límite de crédito" htmlFor="limit">
+        <input
+          id="limit"
           name="limit"
           inputMode="decimal"
           autoComplete="off"
           required
+          aria-required="true"
+          aria-invalid={errors.limit ? true : undefined}
+          aria-describedby={describedBy("limit-help", errors.limit && "limit-error")}
           value={limit}
-          onChange={(e) => setLimit(formatAmountTyping(e.target.value))}
+          onChange={(e) => {
+            setLimit(formatAmountTyping(e.target.value));
+            clearError("limit");
+          }}
           placeholder="2.000.000"
-          aria-describedby="limit-help form-error"
           className={fieldClass}
         />
         <span id="limit-help" className="text-xs">
           En pesos, mayor que 0.
         </span>
-      </label>
+        <FieldError id="limit-error" message={errors.limit} />
+      </Field>
 
       <div className="grid grid-cols-2 gap-3">
-        <label className="flex flex-col gap-1 text-sm text-muted">
-          Día de corte
-          <input name="statement_day" type="number" inputMode="numeric" min={1} max={31} step={1} required placeholder="15" className={fieldClass} />
-        </label>
-        <label className="flex flex-col gap-1 text-sm text-muted">
-          Día de pago
-          <input name="due_day" type="number" inputMode="numeric" min={1} max={31} step={1} required placeholder="30" className={fieldClass} />
-        </label>
+        <Field label="Día de corte" htmlFor="statement_day">
+          <input
+            id="statement_day"
+            name="statement_day"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={31}
+            step={1}
+            required
+            aria-required="true"
+            aria-invalid={errors.statement_day ? true : undefined}
+            aria-describedby={describedBy(errors.statement_day && "statement_day-error")}
+            placeholder="15"
+            onChange={() => clearError("statement_day")}
+            className={fieldClass}
+          />
+          <FieldError id="statement_day-error" message={errors.statement_day} />
+        </Field>
+        <Field label="Día de pago" htmlFor="due_day">
+          <input
+            id="due_day"
+            name="due_day"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={31}
+            step={1}
+            required
+            aria-required="true"
+            aria-invalid={errors.due_day ? true : undefined}
+            aria-describedby={describedBy(errors.due_day && "due_day-error")}
+            placeholder="30"
+            onChange={() => clearError("due_day")}
+            className={fieldClass}
+          />
+          <FieldError id="due_day-error" message={errors.due_day} />
+        </Field>
       </div>
       <p className="text-xs text-muted">Si el mes no tiene ese día (por ejemplo 31 en abril), se usa el último día del mes.</p>
 
