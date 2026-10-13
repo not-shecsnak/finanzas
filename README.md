@@ -51,7 +51,7 @@ npm run test:coverage   # con cobertura v8 (falla si baja del umbral)
 
 Cubren lógica pura en `src/lib/*.test.ts`: montos, fechas, resumen, validación de movimientos y de auth, errores de auth, normalización de la URL de Supabase, validación de formularios por campo (`form-validation`) y filtrado de categorías por tipo (`category-options`). Los componentes de React no tienen tests unitarios propios: se cubren con las pruebas E2E (sección E2E).
 
-También hay tests de integración de las Server Actions (`movimientos`, `credito`, `login`) con un cliente Supabase simulado (`src/test/supabase-mock.ts`): sesión, validación, categoría, filas afectadas por RLS, errores de BD con mensaje genérico y centavos enviados a la base. La cobertura se mide sobre `src/lib` y las acciones; medida actual: líneas 84,22 %, sentencias 84,59 %, ramas 84,38 %, funciones 77,94 %. Umbral en `vitest.config.ts`: 79 % líneas/sentencias/ramas y 72 % funciones; el CI lo exige y sube `coverage/` como artefacto.
+También hay tests de integración de las Server Actions (`movimientos`, `credito`, `login`) con un cliente Supabase simulado (`src/test/supabase-mock.ts`): sesión, validación, categoría, filas afectadas por RLS, errores de BD con mensaje genérico y centavos enviados a la base. La cobertura se mide sobre `src/lib` y las acciones; medida actual: líneas 85,18 %, sentencias 85,71 %, ramas 84,86 %, funciones 81,25 %. Umbral en `vitest.config.ts`: 79 % líneas/sentencias/ramas y 72 % funciones; el CI lo exige y sube `coverage/` como artefacto.
 
 ## Estructura
 

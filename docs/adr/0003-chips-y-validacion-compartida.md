@@ -18,6 +18,6 @@ Registrar un gasto desde Inicio tomaba 4 toques (+, enfocar monto, abrir el `<se
 
 ## Consecuencias
 - Gasto de hoy = 3 toques; ingreso = 4 (hay que cambiar de tipo). Medido en E2E.
-- Con muchas categorías los chips ocupan más pantalla (hoy hay 8 sembradas; 5-6 por tipo).
+- Con muchas categorías los chips ocupan más pantalla (hoy se siembran 8: 6 de gasto y 2 de ingreso).
 - Los mensajes de error son los del esquema: cualquier cambio de regla se hace en un solo lugar.
 - No verificado: apertura del teclado por el foco automático en iOS Safari / dispositivos reales.
