@@ -1,0 +1,63 @@
+# Prueba de aislamiento RLS (PR-7). Workflow separado del job `test` de ci.yml.
+# Origen de supabase/: migraciones y pruebas traidas de la rama fix/PR-7-rls-hardening
+# (commit 9d48ebe). Orden: stub de auth -> init -> hardening -> rls_check_v2.sql.
+# El stub de auth SOLO se aplica aqui, en un Postgres de servicio desechable; jamas en Supabase.
+# La contrasena de abajo es efimera de CI para un contenedor que muere con el job: no es un secreto.
+name: rls
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  rls-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16.4
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci_ephemeral_db_only
+          POSTGRES_DB: rls_ok
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: ci_ephemeral_db_only
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar cliente psql
+        run: |
+          command -v psql >/dev/null || {
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends postgresql-client
+          }
+          psql --version
+
+      - name: Aislamiento RLS (stub + init + hardening + rls_check_v2)
+        run: scripts/rls-check.sh rls_ok full
+
+      - name: Verificacion negativa (sin hardening la prueba DEBE fallar)
+        run: |
+          # Los roles del stub son globales al cluster: se limpian antes de repetir el stub en otra base.
+          scripts/rls-check.sh rls_ok reset
+          psql -v ON_ERROR_STOP=1 -c 'create database rls_neg'
+          if scripts/rls-check.sh rls_neg no-hardening; then
+            echo "::error::rls_check_v2 paso sin hardening: la prueba no detecta regresiones"
+            exit 1
+          fi
+          echo "OK: la prueba falla sin hardening, como se esperaba"
