@@ -23,7 +23,7 @@ export type FormInitial = {
 const FIELD_ORDER = ["kind", "amount", "category_id", "occurred_on", "note"] as const;
 
 const fieldClass =
-  "min-h-11 w-full rounded-xl border border-field-border bg-bg px-4 py-3 text-ink placeholder:text-muted focus-visible:outline-2 focus-visible:outline-accent-soft aria-invalid:border-2 aria-invalid:border-expense";
+  "min-h-11 w-full rounded-xl border border-field-border bg-bg px-4 py-3 text-ink placeholder:text-muted focus-visible:outline-2 focus-visible:outline-accent-soft aria-invalid:border-expense aria-invalid:shadow-[0_0_0_1px_var(--color-expense)]";
 const focusRing = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-soft";
 
 function describedBy(...ids: (string | false | undefined)[]): string | undefined {
@@ -56,6 +56,8 @@ export function TransactionForm({ categories, initial }: { categories: Category[
   // Controlada: así sobrevive al reseteo del formulario que hace React 19 tras un error del servidor.
   const [category, setCategory] = useState(() => resolveCategory(categories, initial.kind, initial.category_id));
   const [errors, setErrors] = useState<FieldErrors>({});
+  // Estado del servidor cuyo error ya se descartó (un nuevo envío bloqueado por el cliente).
+  const [dismissedState, setDismissedState] = useState<FormState | null>(null);
   // React 19 resetea el formulario tras cada action y los radios controlados vuelven a su atributo
   // `checked` inicial (la selección se perdería). Se vuelven a montar con el estado actual tras un error.
   const [radioSync, setRadioSync] = useState(0);
@@ -93,6 +95,8 @@ export function TransactionForm({ categories, initial }: { categories: Category[
     setErrors(found);
     const first = firstInvalidField(found, FIELD_ORDER);
     if (!first) return;
+    // El error del servidor es de un envío anterior: se oculta al bloquear este.
+    setDismissedState(state);
     e.preventDefault();
     const target = form.elements.namedItem(first);
     const el = target instanceof RadioNodeList ? target[0] : target;
@@ -226,7 +230,7 @@ export function TransactionForm({ categories, initial }: { categories: Category[
       </Field>
 
       <p id="form-error" role="alert" className="min-h-5 text-sm text-expense">
-        {state.error}
+        {state === dismissedState ? null : state.error}
       </p>
 
       <div className="flex gap-3">

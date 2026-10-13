@@ -11,7 +11,7 @@ import { formatAmountTyping } from "@/lib/money";
 const FIELD_ORDER = ["name", "limit", "statement_day", "due_day"] as const;
 
 const fieldClass =
-  "min-h-11 w-full rounded-xl border border-muted bg-bg px-4 py-3 text-ink placeholder:text-muted focus-visible:outline-2 focus-visible:outline-accent-soft aria-invalid:border-2 aria-invalid:border-expense";
+  "min-h-11 w-full rounded-xl border border-muted bg-bg px-4 py-3 text-ink placeholder:text-muted focus-visible:outline-2 focus-visible:outline-accent-soft aria-invalid:border-expense aria-invalid:shadow-[0_0_0_1px_var(--color-expense)]";
 const focusRing = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-soft";
 
 function describedBy(...ids: (string | false | undefined)[]): string | undefined {
@@ -41,6 +41,11 @@ export function CardForm() {
   const [state, action, pending] = useActionState<FormState, FormData>(saveCard, {});
   const [limit, setLimit] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
+  // Estado del servidor cuyo error ya se descartó (un nuevo envío bloqueado por el cliente).
+  const [dismissedState, setDismissedState] = useState<FormState | null>(null);
+
+  // Tras un error React 19 resetea los campos no controlados: se repueblan con lo enviado.
+  const sent = state.values;
 
   function clearError(name: string) {
     setErrors((e) => withoutError(e, name));
@@ -55,6 +60,8 @@ export function CardForm() {
     setErrors(found);
     const first = firstInvalidField(found, FIELD_ORDER);
     if (!first) return;
+    // El error del servidor es de un envío anterior: se oculta al bloquear este.
+    setDismissedState(state);
     e.preventDefault();
     const el = form.elements.namedItem(first);
     if (el instanceof HTMLElement) el.focus();
@@ -72,6 +79,7 @@ export function CardForm() {
           aria-describedby={describedBy(errors.name && "name-error")}
           maxLength={40}
           autoComplete="off"
+          defaultValue={sent?.name ?? ""}
           placeholder="Mi tarjeta"
           onChange={() => clearError("name")}
           className={fieldClass}
@@ -117,6 +125,7 @@ export function CardForm() {
             aria-required="true"
             aria-invalid={errors.statement_day ? true : undefined}
             aria-describedby={describedBy(errors.statement_day && "statement_day-error")}
+            defaultValue={sent?.statement_day ?? ""}
             placeholder="15"
             onChange={() => clearError("statement_day")}
             className={fieldClass}
@@ -136,6 +145,7 @@ export function CardForm() {
             aria-required="true"
             aria-invalid={errors.due_day ? true : undefined}
             aria-describedby={describedBy(errors.due_day && "due_day-error")}
+            defaultValue={sent?.due_day ?? ""}
             placeholder="30"
             onChange={() => clearError("due_day")}
             className={fieldClass}
@@ -146,7 +156,7 @@ export function CardForm() {
       <p className="text-xs text-muted">Si el mes no tiene ese día (por ejemplo 31 en abril), se usa el último día del mes.</p>
 
       <p id="form-error" role="alert" className="min-h-5 text-sm text-expense">
-        {state.error}
+        {state === dismissedState ? null : state.error}
       </p>
 
       <div className="flex gap-3">
