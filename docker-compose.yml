@@ -1,0 +1,17 @@
+# Desarrollo local: `docker compose up --build`
+# Supabase es hospedado, por eso no hay servicio de base de datos.
+# Las variables salen de tu .env (no se versiona; plantilla en .env.example).
+services:
+  web:
+    build:
+      context: .
+      target: runtime
+      args:
+        # Compose interpola estas variables desde .env y las pasa al build,
+        # porque NEXT_PUBLIC_* se incrustan al compilar.
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?define NEXT_PUBLIC_SUPABASE_URL en .env}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?define NEXT_PUBLIC_SUPABASE_ANON_KEY en .env}
+    env_file: .env
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
