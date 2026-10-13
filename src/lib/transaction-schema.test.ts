@@ -30,6 +30,8 @@ describe("transactionSchema", () => {
     ["tipo inválido", { kind: "otro" }],
     ["categoría que no es uuid", { category_id: "1; drop table" }],
     ["fecha inválida", { occurred_on: "2026-13-45" }],
+    ["año fuera de rango", { occurred_on: "1999-12-31" }],
+    ["año fuera de rango (alto)", { occurred_on: "2101-01-01" }],
     ["nota demasiado larga", { note: "x".repeat(201) }],
   ])("rechaza %s", (_name, override) => {
     expect(transactionSchema.safeParse({ ...valid, ...override }).success).toBe(false);

@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import { TransactionForm } from "@/components/transaction-form";
 import { todayIso } from "@/lib/dates";
 import { getCategories, LOAD_ERROR } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
+
+export const metadata: Metadata = { title: "Nuevo movimiento" };
 
 export default async function NuevoMovimiento() {
   const supabase = await createClient();

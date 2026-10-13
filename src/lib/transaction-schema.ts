@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isSupportedYear } from "@/lib/dates";
 import { parseToCents } from "@/lib/money";
 
 /** Valida el formulario de movimiento (todo llega como texto). Salida lista para la base. */
@@ -13,7 +14,9 @@ export const transactionSchema = z.object({
     return cents;
   }),
   category_id: z.uuid({ error: "Elige una categoría" }),
-  occurred_on: z.iso.date({ error: "Fecha no válida" }),
+  occurred_on: z.iso
+    .date({ error: "Fecha no válida" })
+    .refine((d) => isSupportedYear(Number(d.slice(0, 4))), "Fecha no válida (años 2000 a 2100)"),
   note: z
     .string()
     .trim()

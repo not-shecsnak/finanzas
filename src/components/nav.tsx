@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const ITEMS = [
   { href: "/", label: "Inicio", icon: "◉" },
   { href: "/movimientos", label: "Movimientos", icon: "☰" },
+  { href: "/credito", label: "Crédito", icon: "▭" },
 ];
 
 export function Nav() {

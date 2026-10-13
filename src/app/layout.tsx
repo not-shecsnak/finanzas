@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Finanzas",
+  title: { default: "Finanzas", template: "%s · Finanzas" },
   description: "Ordena tus ingresos y gastos y cuida tus hábitos de crédito.",
 };
 
