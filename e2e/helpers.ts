@@ -29,7 +29,7 @@ export async function addExpense(page: Page, amount: string, category: string, n
   const amountField = page.getByLabel("Monto");
   await amountField.fill(amount);
   await expect(amountField).toHaveValue(amount);
-  await page.getByLabel("Categoría").selectOption({ label: category });
+  await page.getByRole("radio", { name: category }).check();
   await page.getByLabel("Nota (opcional)").fill(note);
   await page.getByRole("button", { name: "Guardar" }).click();
   await expect(page.getByRole("heading", { name: "Movimientos" })).toBeVisible();
