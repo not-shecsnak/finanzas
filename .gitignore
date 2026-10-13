@@ -7,3 +7,7 @@ __pycache__/
 next-env.d.ts
 coverage/
 *.tsbuildinfo
+playwright-report/
+test-results/
+supabase/.branches/
+supabase/.temp/

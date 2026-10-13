@@ -2,7 +2,7 @@
 
 App web personal para ordenar ingresos y gastos (pensada para un joven de 20 años que quiere construir historial crediticio). Mobile-first, tema morado oscuro, interfaz en español y moneda COP. Cada usuario ve únicamente sus datos.
 
-Estado (v1): login, movimientos (crear, editar, eliminar, filtrar por mes y categoría) y resumen mensual. La pantalla de crédito (PR-6) y el despliegue/Docker (PR-8) aún no están en esta rama.
+Estado (v1): login, movimientos (crear, editar, eliminar, filtrar por mes y categoría) y resumen mensual. Incluye también la pantalla de crédito (PR-6), Docker/CI (PR-8), pruebas y E2E (PR-7). Despliegue paso a paso en [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ## Stack
 
@@ -29,7 +29,7 @@ En Supabase, Authentication debe permitir registro con correo; si no, el formula
 
 ## Migración de base de datos
 
-El esquema vive en `supabase/migrations/20261001000000_init_schema.sql`, en la rama `feat/PR-3-esquema-supabase-rls` (PR #3, aún sin mergear; no está en la rama donde se escribió este README). Aplícalo pegándolo en el SQL Editor de Supabase. Ya se aplicó en el proyecto del autor (volver a correrla da `42P07: relation "categories" already exists`, lo cual es esperado). Con la CLI de Supabase no se ha probado.
+Las migraciones viven en `supabase/migrations/` (`20261001000000_init_schema.sql` y `20261002000000_hardening.sql`, en ese orden). Orden y comprobaciones en [docs/DEPLOY.md](docs/DEPLOY.md). Aplícalas pegándolas en el SQL Editor de Supabase. La primera ya se aplicó en el proyecto del autor (volver a correrla da `42P07: relation "categories" already exists`, lo cual es esperado); la de endurecimiento está pendiente de aplicar allí. La CLI de Supabase solo se ha usado en local para el E2E.
 
 Qué contiene (leído del archivo):
 
@@ -45,10 +45,13 @@ Qué contiene (leído del archivo):
 ## Tests
 
 ```bash
-npm test      # vitest run
+npm test                # vitest run
+npm run test:coverage   # con cobertura v8 (falla si baja del umbral)
 ```
 
 Cubren lógica pura en `src/lib/*.test.ts`: montos, fechas, resumen, validación de movimientos y de auth, errores de auth y normalización de la URL de Supabase. No hay tests E2E ni de componentes todavía.
+
+También hay tests de integración de las Server Actions (`movimientos`, `credito`, `login`) con un cliente Supabase simulado (`src/test/supabase-mock.ts`): sesión, validación, categoría, filas afectadas por RLS, errores de BD con mensaje genérico y centavos enviados a la base. La cobertura se mide sobre `src/lib` y las acciones; medida actual: líneas 84,22 %, sentencias 84,59 %, ramas 84,38 %, funciones 77,94 %. Umbral en `vitest.config.ts`: 79 % líneas/sentencias/ramas y 72 % funciones; el CI lo exige y sube `coverage/` como artefacto.
 
 ## Estructura
 
@@ -76,6 +79,19 @@ docs/adr/                   decisiones de arquitectura
 ## Montos a la colombiana
 
 Se guardan como enteros en centavos (nunca float) y se muestran con `es-CO`/`COP` (`$ 50.000`; decimales solo si existen). Al escribir, el campo agrupa miles con punto y la coma marca decimales. Se aceptan `50000`, `50.000`, `1.500.000`, `150,50`, `1.234,56` y `1,234.56`; se rechazan formatos ambiguos como `1,234`, y el máximo es 99.999.999.999 centavos.
+
+## E2E
+
+Playwright + axe (WCAG 2.0/2.1/2.2 AA) contra un Supabase local en puertos propios (`55321`-`55327`, `project_id = "finanzas-e2e"`), sin tocar producción ni otros stacks locales. Requiere Docker.
+
+```bash
+npx supabase@latest start        # aplica supabase/migrations/ (usa supabase/config.toml)
+eval "$(npx supabase@latest status -o env | grep -E '^(API_URL|ANON_KEY)=')"; export NEXT_PUBLIC_SUPABASE_URL="$API_URL" NEXT_PUBLIC_SUPABASE_ANON_KEY="$ANON_KEY"
+npx playwright install chromium && npm run test:e2e   # construye y sirve la app en :3100
+npx supabase@latest stop --no-backup
+```
+
+Las claves salen del entorno del shell, no de archivos. Con `E2E_BASE_URL` se usa un servidor ya levantado. En CI corre `.github/workflows/e2e.yml`.
 
 ## Flujo de trabajo (HDD)
 

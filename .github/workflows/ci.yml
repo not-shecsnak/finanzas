@@ -22,7 +22,23 @@ jobs:
 
       - run: npm run lint
 
-      - run: npm test
+      # Corre los tests y falla si la cobertura baja del umbral de vitest.config.ts.
+      - name: Tests con cobertura
+        run: npm run test:coverage
+
+      - name: Subir cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          if-no-files-found: ignore
+
+      # Solo dependencias de runtime. `braces` (GHSA-vfj7-8cjw-p6xm, DoS) llega solo por
+      # eslint-config-next (herramienta de lint) y npm no ofrece version parcheada; revisar
+      # al actualizar eslint-config-next y volver a auditar todo (quitar --omit=dev).
+      - name: Auditoria de dependencias (runtime)
+        run: npm audit --omit=dev --audit-level=high
 
       # Variables ficticias: solo para que compile; no son credenciales reales.
       - name: Build
