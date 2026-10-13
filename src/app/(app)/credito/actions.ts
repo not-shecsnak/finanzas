@@ -6,7 +6,22 @@ import { balanceSchema, cardSchema } from "@/lib/credit-schema";
 import { monthRange } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
 
-export type FormState = { error?: string; ok?: boolean };
+/** Valores devueltos tras un error para que React 19 no los pierda al resetear el formulario. */
+export type CardValues = { name: string; statement_day: string; due_day: string };
+export type FormState = { error?: string; ok?: boolean; values?: CardValues };
+
+function text(formData: FormData, name: string): string {
+  const v = formData.get(name);
+  return typeof v === "string" ? v : "";
+}
+
+function cardValues(formData: FormData): CardValues {
+  return {
+    name: text(formData, "name"),
+    statement_day: text(formData, "statement_day"),
+    due_day: text(formData, "due_day"),
+  };
+}
 
 export async function saveCard(
   _prev: FormState,
@@ -18,7 +33,7 @@ export async function saveCard(
     statement_day: formData.get("statement_day") ?? "",
     due_day: formData.get("due_day") ?? "",
   });
-  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  if (!parsed.success) return { error: parsed.error.issues[0].message, values: cardValues(formData) };
 
   const supabase = await createClient();
   const {
@@ -37,7 +52,7 @@ export async function saveCard(
       error?.code,
       error?.message ?? "0 filas afectadas",
     );
-    return { error: "No se pudo guardar la tarjeta. Inténtalo de nuevo." };
+    return { error: "No se pudo guardar la tarjeta. Inténtalo de nuevo.", values: cardValues(formData) };
   }
   redirect("/credito");
 }

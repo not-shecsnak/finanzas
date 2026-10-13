@@ -49,9 +49,9 @@ npm test                # vitest run
 npm run test:coverage   # con cobertura v8 (falla si baja del umbral)
 ```
 
-Cubren lógica pura en `src/lib/*.test.ts`: montos, fechas, resumen, validación de movimientos y de auth, errores de auth y normalización de la URL de Supabase. No hay tests E2E ni de componentes todavía.
+Cubren lógica pura en `src/lib/*.test.ts`: montos, fechas, resumen, validación de movimientos y de auth, errores de auth, normalización de la URL de Supabase, validación de formularios por campo (`form-validation`) y filtrado de categorías por tipo (`category-options`). Los componentes de React no tienen tests unitarios propios: se cubren con las pruebas E2E (sección E2E).
 
-También hay tests de integración de las Server Actions (`movimientos`, `credito`, `login`) con un cliente Supabase simulado (`src/test/supabase-mock.ts`): sesión, validación, categoría, filas afectadas por RLS, errores de BD con mensaje genérico y centavos enviados a la base. La cobertura se mide sobre `src/lib` y las acciones; medida actual: líneas 84,22 %, sentencias 84,59 %, ramas 84,38 %, funciones 77,94 %. Umbral en `vitest.config.ts`: 79 % líneas/sentencias/ramas y 72 % funciones; el CI lo exige y sube `coverage/` como artefacto.
+También hay tests de integración de las Server Actions (`movimientos`, `credito`, `login`) con un cliente Supabase simulado (`src/test/supabase-mock.ts`): sesión, validación, categoría, filas afectadas por RLS, errores de BD con mensaje genérico y centavos enviados a la base. La cobertura se mide sobre `src/lib` y las acciones; medida actual: líneas 85,18 %, sentencias 85,71 %, ramas 84,86 %, funciones 81,25 %. Umbral en `vitest.config.ts`: 79 % líneas/sentencias/ramas y 72 % funciones; el CI lo exige y sube `coverage/` como artefacto.
 
 ## Estructura
 
@@ -64,11 +64,13 @@ src/
     (app)/                  rutas protegidas
       page.tsx              inicio: resumen del mes y gasto por categoría
       movimientos/          lista, nuevo/, [id]/ (editar), actions.ts
-  components/               nav, fab, month-picker, summary-cards, transaction-form
+  components/               nav, fab, month-picker, summary-cards, transaction-form, card-form
   lib/
     money.ts                centavos <-> texto COP
     dates.ts, summary.ts, queries.ts
     transaction-schema.ts, auth-schema.ts, auth-errors.ts
+    form-validation.ts      errores por campo con el mismo esquema Zod (cliente y tests)
+    category-options.ts     categorías por tipo de movimiento
     config.ts, env.ts       LOCALE/CURRENCY y variables de Supabase
     supabase/               clientes server y proxy
 scripts/                    flujo HDD (close_issue.sh, linear_client.py, ...)
@@ -91,7 +93,22 @@ npx playwright install chromium && npm run test:e2e   # construye y sirve la app
 npx supabase@latest stop --no-backup
 ```
 
+La suite cubre login, aislamiento entre usuarios, CRUD de movimientos, accesibilidad con axe (formularios con chip seleccionado y con errores, en móvil y escritorio), registro rápido (conteo de toques medido), validación en cliente sin petición al servidor y rechazo del servidor ante datos que el cliente deja pasar. Corre en dos proyectos de Playwright (`movil`, Pixel 7, y `escritorio`).
+
 Las claves salen del entorno del shell, no de archivos. Con `E2E_BASE_URL` se usa un servidor ya levantado. En CI corre `.github/workflows/e2e.yml`.
+
+## Registro rápido
+
+Objetivo: agregar un movimiento desde Inicio en 3 toques o menos.
+
+- **Gasto con fecha de hoy y sin nota = 3 toques**: (1) "+" (botón flotante), (2) categoría (chip), (3) Guardar. El monto recibe foco automático al abrir `/movimientos/nuevo` (solo al crear, no al editar), así que se escribe por teclado sin tocar el campo. El E2E `e2e/registro-rapido.spec.ts` lo mide con un contador de clics reales y afirma `<= 3` (medido: 3).
+- **Ingreso = 4 toques**: hay que cambiar de Gasto a Ingreso (1 "+", 2 Ingreso, 3 categoría, 4 Guardar). Medido: 4.
+- Cambiar la fecha o escribir una nota suman toques extra.
+- "Toque" aquí es un clic en un control; escribir el monto con el teclado no se cuenta.
+- **No verificado en dispositivo real**: en móvil el foco automático debería abrir el teclado numérico, pero en iOS Safari el foco programático puede no abrir el teclado y obligar a tocar el campo (un toque más). Los E2E usan Chromium emulando un Pixel 7, no un teléfono físico ni Safari.
+- Las categorías son radios nativos con aspecto de chips: se recorren con las flechas del teclado.
+
+Validación: el formulario valida en el cliente con el mismo esquema Zod que la Server Action (`transactionSchema`, `cardSchema`), muestra el error junto a cada campo y no envía nada si hay errores. El servidor valida siempre de nuevo. Ver [ADR 0003](docs/adr/0003-chips-y-validacion-compartida.md).
 
 ## Flujo de trabajo (HDD)
 

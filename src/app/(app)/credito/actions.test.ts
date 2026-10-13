@@ -46,6 +46,8 @@ describe("saveCard", () => {
     setup();
     const res = await saveCard({}, form({ ...validCard, statement_day: "40" }));
     expect(res.error).toMatch(/Día de corte no válido/);
+    // Devuelve lo enviado para repoblar el formulario (React 19 lo resetea tras la action).
+    expect(res.values).toEqual({ name: " Visa ", statement_day: "40", due_day: "20" });
     expect(createClient).not.toHaveBeenCalled();
   });
 
@@ -58,7 +60,10 @@ describe("saveCard", () => {
   it("error de BD: mensaje genérico sin filtrar el interno", async () => {
     setup({ results: { "credit_cards.insert": { data: null, error: { code: "42501", message: "policy secreta" } } } });
     const res = await saveCard({}, form(validCard));
-    expect(res).toEqual({ error: "No se pudo guardar la tarjeta. Inténtalo de nuevo." });
+    expect(res).toEqual({
+      error: "No se pudo guardar la tarjeta. Inténtalo de nuevo.",
+      values: { name: " Visa ", statement_day: "5", due_day: "20" },
+    });
     expect(errorSpy).toHaveBeenCalledWith("[saveCard]", "42501", "policy secreta");
   });
 
