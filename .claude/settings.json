@@ -6,6 +6,8 @@
       "Bash(npm test*)",
       "Bash(npm run*)",
       "Bash(python3 scripts/*)",
+      "Bash(python scripts/linear_client.py *)",
+      "Bash(git push origin *)",
       "Bash(bash scripts/*)",
       "Bash(node tests/*)",
       "Skill(create-issue *)",
