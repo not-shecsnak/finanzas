@@ -25,3 +25,9 @@ Feature: [[PR-2]] · Rama `feat/PR-5-movimientos-resumen` · PR #5 abierta, sin 
 ## Pendientes
 - Sin E2E ni tests de componentes.
 - Finalizar con `/close-issue PR-5` tras el merge.
+
+## Registro rápido y validación cliente (rama `feat/PR-5-registro-rapido`)
+- Chips de categoría (radios nativos), foco automático en el monto solo al crear, validación en cliente con `transactionSchema`/`cardSchema` vía `src/lib/form-validation.ts`; la Server Action sigue validando. Ver `docs/adr/0003-chips-y-validacion-compartida.md`.
+- Medido por E2E (`e2e/registro-rapido.spec.ts`): gasto de hoy = 3 toques, ingreso = 4.
+- Hallazgo: tras un error del servidor React 19 reseteaba el formulario y desmarcaba la categoría y el tipo (radios controlados); se corrige remontando los radios.
+- Pendiente: probar el foco automático/teclado en un dispositivo real (iOS Safari incluido).
