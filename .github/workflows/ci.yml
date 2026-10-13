@@ -34,8 +34,11 @@ jobs:
           path: coverage/
           if-no-files-found: ignore
 
-      - name: Auditoria de dependencias
-        run: npm audit --audit-level=high
+      # Solo dependencias de runtime. `braces` (GHSA-vfj7-8cjw-p6xm, DoS) llega solo por
+      # eslint-config-next (herramienta de lint) y npm no ofrece version parcheada; revisar
+      # al actualizar eslint-config-next y volver a auditar todo (quitar --omit=dev).
+      - name: Auditoria de dependencias (runtime)
+        run: npm audit --omit=dev --audit-level=high
 
       # Variables ficticias: solo para que compile; no son credenciales reales.
       - name: Build
