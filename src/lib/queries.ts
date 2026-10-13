@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { monthRange } from "@/lib/dates";
+import { fetchAllPages } from "@/lib/paginate";
 import type { Kind } from "@/lib/summary";
 
 export type Category = { id: string; name: string; kind: Kind; color: string };
@@ -21,19 +22,25 @@ export async function getCategories(supabase: SupabaseClient) {
   return { categories: (data ?? []) as Category[], error };
 }
 
+/** Máximo de filas que se muestran en la lista; el resumen siempre usa todas las del mes. */
+export const LIST_LIMIT = 200;
+
+/** Todas las filas del mes (paginadas) para que los totales sean exactos. */
 export async function getMonthTransactions(supabase: SupabaseClient, month: string, categoryId?: string) {
   const { from, to } = monthRange(month);
-  let query = supabase
-    .from("transactions")
-    .select("id, kind, amount_cents, category_id, occurred_on, note")
-    .gte("occurred_on", from)
-    .lt("occurred_on", to)
-    .order("occurred_on", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(500);
-  if (categoryId) query = query.eq("category_id", categoryId);
-  const { data, error } = await query;
-  return { transactions: (data ?? []) as TxRow[], error };
+  const { rows, error, truncated } = await fetchAllPages<TxRow>((start, end) => {
+    let query = supabase
+      .from("transactions")
+      .select("id, kind, amount_cents, category_id, occurred_on, note")
+      .gte("occurred_on", from)
+      .lt("occurred_on", to)
+      .order("occurred_on", { ascending: false })
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false }); // desempate estable entre bloques
+    if (categoryId) query = query.eq("category_id", categoryId);
+    return query.range(start, end);
+  });
+  return { transactions: rows, error, truncated };
 }
 
 export type CardRow = { id: string; name: string; limit_cents: number; statement_day: number; due_day: number };

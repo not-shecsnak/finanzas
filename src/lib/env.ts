@@ -6,7 +6,7 @@ export function normalizeSupabaseUrl(raw: string): string {
   } catch {
     throw new Error("NEXT_PUBLIC_SUPABASE_URL no es una URL válida (usa https://<id>.supabase.co)");
   }
-  if (parsed.protocol !== "https:" && parsed.hostname !== "localhost") {
+  if (parsed.protocol !== "https:" && parsed.hostname !== "localhost" && parsed.hostname !== "127.0.0.1") {
     throw new Error("NEXT_PUBLIC_SUPABASE_URL debe empezar por https://");
   }
   return parsed.origin;

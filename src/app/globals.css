@@ -3,13 +3,23 @@
 @theme {
   --color-bg: #0f0b1a;
   --color-surface: #1a1330;
+  /* Decorativo (tarjetas, separadores): sutil a propósito. */
   --color-border: #2e2350;
+  /* Bordes de controles de formulario: >= 3:1 sobre bg (WCAG 1.4.11) = 3,52:1. */
+  --color-field-border: #6d5fa3;
+  /* Texto sobre fondo accent: bg oscuro = 4,58:1 (blanco daba 4,23:1, no pasa AA). */
+  --color-on-accent: #0f0b1a;
   --color-accent: #8b5cf6;
   --color-accent-soft: #a78bfa;
   --color-ink: #ede9fe;
   --color-muted: #a59cc4;
   --color-income: #34d399;
   --color-expense: #f87171;
+}
+
+html {
+  /* Las barras fijas (nav inferior, FAB) no deben tapar el elemento enfocado. */
+  scroll-padding-bottom: 6rem;
 }
 
 body {

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { z } from "zod";
 import { AddFab } from "@/components/fab";
@@ -5,9 +6,11 @@ import { MonthPicker } from "@/components/month-picker";
 import { SummaryCards } from "@/components/summary-cards";
 import { sanitizeMonth } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
-import { getCategories, getMonthTransactions, LOAD_ERROR } from "@/lib/queries";
+import { getCategories, getMonthTransactions, LIST_LIMIT, LOAD_ERROR } from "@/lib/queries";
 import { summarize } from "@/lib/summary";
 import { createClient } from "@/lib/supabase/server";
+
+export const metadata: Metadata = { title: "Movimientos" };
 
 export default async function Movimientos({
   searchParams,
@@ -20,7 +23,7 @@ export default async function Movimientos({
   const categoryId = category.success ? category.data : undefined;
 
   const supabase = await createClient();
-  const [{ transactions, error: txError }, { categories, error: catError }] = await Promise.all([
+  const [{ transactions, error: txError, truncated }, { categories, error: catError }] = await Promise.all([
     getMonthTransactions(supabase, month, categoryId),
     getCategories(supabase),
   ]);
@@ -39,7 +42,7 @@ export default async function Movimientos({
         <label className="sr-only" htmlFor="categoria">
           Filtrar por categoría
         </label>
-        <select id="categoria" name="categoria" defaultValue={categoryId ?? ""} className="min-h-11 flex-1 rounded-xl border border-border bg-bg px-3 text-ink">
+        <select id="categoria" name="categoria" defaultValue={categoryId ?? ""} className="min-h-11 flex-1 rounded-xl border border-field-border bg-bg px-3 text-ink">
           <option value="">Todas las categorías</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
@@ -59,11 +62,16 @@ export default async function Movimientos({
       ) : (
         <>
           <SummaryCards summary={summary} />
+          {truncated && (
+            <p role="alert" className="rounded-2xl border border-expense/40 bg-surface p-4 text-expense">
+              Este mes tiene demasiados movimientos: los totales pueden estar incompletos.
+            </p>
+          )}
           {transactions.length === 0 ? (
             <p className="text-muted">No hay movimientos en este mes. Toca + para agregar uno.</p>
           ) : (
             <ul className="flex flex-col gap-2">
-              {transactions.map((t) => {
+              {transactions.slice(0, LIST_LIMIT).map((t) => {
                 const cat = names.get(t.category_id);
                 return (
                   <li key={t.id}>
@@ -89,6 +97,11 @@ export default async function Movimientos({
                 );
               })}
             </ul>
+          )}
+          {transactions.length > LIST_LIMIT && (
+            <p role="status" className="text-sm text-muted">
+              Mostrando los {LIST_LIMIT} movimientos más recientes de {transactions.length}. Los totales incluyen todos; filtra por categoría o cambia de mes para ver el resto.
+            </p>
           )}
         </>
       )}
