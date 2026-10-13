@@ -2,7 +2,7 @@
 
 App web personal para ordenar ingresos y gastos (pensada para un joven de 20 años que quiere construir historial crediticio). Mobile-first, tema morado oscuro, interfaz en español y moneda COP. Cada usuario ve únicamente sus datos.
 
-Estado (v1): login, movimientos (crear, editar, eliminar, filtrar por mes y categoría) y resumen mensual. La pantalla de crédito (PR-6) y el despliegue/Docker (PR-8) aún no están en esta rama.
+Estado (v1): login, movimientos (crear, editar, eliminar, filtrar por mes y categoría) y resumen mensual. Incluye también la pantalla de crédito (PR-6), Docker/CI (PR-8), pruebas y E2E (PR-7). Despliegue paso a paso en [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ## Stack
 
@@ -29,7 +29,7 @@ En Supabase, Authentication debe permitir registro con correo; si no, el formula
 
 ## Migración de base de datos
 
-El esquema vive en `supabase/migrations/20261001000000_init_schema.sql`, en la rama `feat/PR-3-esquema-supabase-rls` (PR #3, aún sin mergear; no está en la rama donde se escribió este README). Aplícalo pegándolo en el SQL Editor de Supabase. Ya se aplicó en el proyecto del autor (volver a correrla da `42P07: relation "categories" already exists`, lo cual es esperado). Con la CLI de Supabase no se ha probado.
+Las migraciones viven en `supabase/migrations/` (`20261001000000_init_schema.sql` y `20261002000000_hardening.sql`, en ese orden). Orden y comprobaciones en [docs/DEPLOY.md](docs/DEPLOY.md). Aplícalas pegándolas en el SQL Editor de Supabase. La primera ya se aplicó en el proyecto del autor (volver a correrla da `42P07: relation "categories" already exists`, lo cual es esperado); la de endurecimiento está pendiente de aplicar allí. La CLI de Supabase solo se ha usado en local para el E2E.
 
 Qué contiene (leído del archivo):
 
