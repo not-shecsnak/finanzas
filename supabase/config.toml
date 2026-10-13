@@ -1,0 +1,65 @@
+# Stack LOCAL solo para E2E (Playwright). Puertos propios (55xxx) para no chocar con otros stacks
+# Supabase de la misma máquina (54xxx). Producción es Supabase cloud; esto no la toca.
+# Las migraciones de supabase/migrations/ se aplican solas con `supabase start`.
+# supabase/tests/ (stub de auth, RLS) NO está en migrations/ y no se aplica aquí.
+project_id = "finanzas-e2e"
+
+[api]
+enabled = true
+port = 55321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 55322
+shadow_port = 55320
+major_version = 17
+
+[db.pooler]
+enabled = false
+
+[db.migrations]
+enabled = true
+
+[db.seed]
+enabled = false
+
+# Servicios que los E2E no necesitan.
+[studio]
+enabled = false
+port = 55323
+
+[local_smtp]
+enabled = false
+port = 55324
+
+[realtime]
+enabled = false
+
+[storage]
+enabled = false
+
+[edge_runtime]
+enabled = false
+
+[analytics]
+enabled = false
+port = 55327
+
+[auth]
+enabled = true
+site_url = "http://127.0.0.1:3100"
+additional_redirect_urls = ["http://127.0.0.1:3100"]
+jwt_expiry = 3600
+enable_signup = true
+enable_anonymous_sign_ins = false
+minimum_password_length = 8
+
+[auth.rate_limit]
+# Los E2E crean varios usuarios seguidos desde la misma IP.
+sign_in_sign_ups = 300
+
+[auth.email]
+enable_signup = true
+enable_confirmations = false
