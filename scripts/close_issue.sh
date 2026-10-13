@@ -1,0 +1,366 @@
+#!/usr/bin/env bash
+#
+# close_issue.sh — Harness gate script for closing Linear issues.
+#
+# Runs 3 gates before allowing an issue to be closed:
+#   Gate 1: Tests passing (HDD_TEST_CMD, default: npm test --silent)
+#   Gate 2: CI green (last GitHub Actions run)
+#   Gate 3: Acceptance criteria checked (Linear API)
+#
+# Usage:
+#   bash scripts/close_issue.sh DEMO-1
+#
+
+set -euo pipefail
+
+ISSUE_ID="${1:-}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# ── Colors ──
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+NC='\033[0m'
+
+if [ -z "$ISSUE_ID" ]; then
+    echo -e "${RED}Usage: bash scripts/close_issue.sh <ISSUE_ID>${NC}"
+    exit 1
+fi
+
+# ── Preflight: a gate that cannot run must FAIL the close, never be skipped ──
+# Exit codes: 0 = closed, 1 = a gate failed, 2 = environment broken (could not validate).
+env_broken() {
+    echo "" >&2
+    echo -e "${RED}ENVIRONMENT BROKEN — could not validate: $1${NC}" >&2
+    echo "  $ISSUE_ID was NOT closed. Fix the environment and run again." >&2
+    # An environment failure is not the agent's failed attempt: undo the counter bump.
+    if [ -n "${ATTEMPTS:-}" ]; then echo "$((ATTEMPTS - 1))" > "$ATTEMPTS_DIR/$ISSUE_ID" 2>/dev/null || true; fi
+    exit 2
+}
+
+# On Windows, `python3` can be the Microsoft Store stub (prints "Python was not
+# found" and exits non-zero). Only trust an interpreter that actually runs Python 3.
+PY=""
+for cand in python3 python; do
+    if command -v "$cand" >/dev/null 2>&1         && [ "$("$cand" -c 'import sys; print(sys.version_info[0])' 2>/dev/null)" = "3" ]; then
+        PY="$cand"
+        break
+    fi
+done
+[ -n "$PY" ] || env_broken "no working Python 3 found (python3 may be the Microsoft Store stub; install Python or disable the App execution alias)"
+# Linear titles/descriptions are UTF-8; without this, Windows consoles re-encode them
+# (cp1252) and the vault notes end up with invalid characters.
+export PYTHONIOENCODING=utf-8 PYTHONUTF8=1
+
+command -v gh >/dev/null 2>&1 || env_broken "gh CLI not installed (Gate 2 cannot run)"
+# gh resolves its default repo from `gh repo set-default`, which in a fork can be the
+# UPSTREAM repo — Gate 2 would then read someone else's CI. Pin it to this clone's origin.
+if [ -z "${GH_REPO:-}" ]; then
+    ORIGIN_URL=$(git remote get-url origin 2>/dev/null || true)
+    if [ -n "$ORIGIN_URL" ]; then
+        GH_REPO=$(echo "$ORIGIN_URL" | sed -E 's#\.git$##; s#^(git@github\.com:|https://github\.com/|ssh://git@github\.com/)##')
+        export GH_REPO
+    fi
+fi
+# Per-project knobs (defaults keep the original behaviour):
+#   HDD_TEST_CMD     command for Gate 1            (default: npm test --silent)
+#   HDD_CI_WORKFLOW  workflow file read by Gate 2  (default: ci.yml)
+# Optional per-project config: <repo>/.claude/hdd.conf with KEY=value lines (env vars win).
+HDD_CONF="$SCRIPT_DIR/../.claude/hdd.conf"
+if [ -f "$HDD_CONF" ]; then
+    for key in HDD_TEST_CMD HDD_CI_WORKFLOW; do
+        if [ -z "${!key:-}" ]; then
+            val=$(grep -E "^${key}=" "$HDD_CONF" | head -1 | cut -d= -f2- | tr -d '' || true)
+            if [ -n "$val" ]; then export "$key=$val"; fi
+        fi
+    done
+fi
+TEST_CMD="${HDD_TEST_CMD:-npm test --silent}"
+CI_WORKFLOW="${HDD_CI_WORKFLOW:-ci.yml}"
+TEST_BIN="${TEST_CMD%% *}"
+command -v "$TEST_BIN" >/dev/null 2>&1 || env_broken "'$TEST_BIN' not installed (Gate 1 cannot run; set HDD_TEST_CMD for this project)"
+
+# ── Attempt counter (feeds the "gates passed on first try" metric) ──
+# Lives in the git dir so it is never committed and is shared across worktrees.
+ATTEMPTS_DIR="$(git rev-parse --git-common-dir 2>/dev/null || echo .git)/hdd-attempts"
+mkdir -p "$ATTEMPTS_DIR" 2>/dev/null || true
+ATTEMPTS=$(( $(cat "$ATTEMPTS_DIR/$ISSUE_ID" 2>/dev/null || echo 0) + 1 ))
+echo "$ATTEMPTS" > "$ATTEMPTS_DIR/$ISSUE_ID" 2>/dev/null || true
+
+echo ""
+echo "========================================"
+echo "  Harness Gate Check: $ISSUE_ID"
+echo "========================================"
+echo ""
+
+GATES_PASSED=0
+GATES_TOTAL=3
+
+# ── Gate 1: Tests ──
+
+echo -n "Gate 1/3 — Tests passing... "
+if bash -c "$TEST_CMD" >/dev/null 2>&1; then
+    echo -e "${GREEN}PASS${NC}"
+    GATES_PASSED=$((GATES_PASSED + 1))
+else
+    echo -e "${RED}FAIL${NC}"
+    echo -e "${YELLOW}  Fix: Run '$TEST_CMD' and fix failing tests.${NC}"
+fi
+
+# ── Gate 2: CI Green ──
+
+echo -n "Gate 2/3 — CI green... "
+BRANCH=$(git branch --show-current 2>/dev/null || echo "")
+if [ -z "$BRANCH" ]; then
+    echo -e "${RED}FAIL (detached HEAD: cannot tell which CI run applies)${NC}"
+    echo -e "${YELLOW}  Fix: Check out the issue branch (or main) and run again.${NC}"
+else
+    CI_JSON=$(gh run list --branch "$BRANCH" --workflow "$CI_WORKFLOW" --limit 1 --json status,conclusion) \
+        || env_broken "'gh run list' failed (gh auth / network?) — Gate 2 cannot run"
+    CI_STATE=$(echo "$CI_JSON" | "$PY" -c "import sys,json; d=json.load(sys.stdin); print((d[0].get('status','') + '/' + (d[0].get('conclusion') or '')) if d else 'none')") \
+        || env_broken "could not parse the 'gh run list' output — Gate 2 cannot run"
+    case "$CI_STATE" in
+        completed/success)
+            echo -e "${GREEN}PASS${NC}"
+            GATES_PASSED=$((GATES_PASSED + 1))
+            ;;
+        none)
+            echo -e "${RED}FAIL (no CI run found for branch '$BRANCH')${NC}"
+            echo -e "${YELLOW}  Fix: Push the branch and wait for CI (are GitHub Actions enabled on this repo/fork?).${NC}"
+            ;;
+        completed/*)
+            echo -e "${RED}FAIL (last run: ${CI_STATE#completed/})${NC}"
+            echo -e "${YELLOW}  Fix: Check GitHub Actions and fix the failing workflow.${NC}"
+            ;;
+        *)
+            echo -e "${RED}FAIL (CI still running: ${CI_STATE%%/*})${NC}"
+            echo -e "${YELLOW}  Fix: Wait for the CI run to finish, then run again.${NC}"
+            ;;
+    esac
+fi
+
+# ── Gate 3: Acceptance Criteria ──
+
+echo -n "Gate 3/3 — Acceptance criteria... "
+ISSUE_DATA=$("$PY" "$SCRIPT_DIR/linear_client.py" get "$ISSUE_ID" --full)     || env_broken "could not fetch $ISSUE_ID from Linear (LINEAR_API_KEY / network / issue not found) — Gate 3 cannot run"
+[ -n "$ISSUE_DATA" ] || env_broken "Linear returned an empty issue for $ISSUE_ID — Gate 3 cannot run"
+if true; then
+    # Count checked and unchecked boxes (Linear uses [X] uppercase)
+    UNCHECKED=$(echo "$ISSUE_DATA" | grep -c '\- \[ \]' || true)
+    CHECKED=$(echo "$ISSUE_DATA" | grep -ci '\- \[x\]' || true)
+    TOTAL=$((UNCHECKED + CHECKED))
+
+    if [ "$TOTAL" -eq 0 ]; then
+        echo -e "${RED}FAIL (no acceptance criteria: the issue has no '- [ ]' checkboxes)${NC}"
+        echo -e "${YELLOW}  Fix: Add the acceptance criteria as checkboxes in Linear and tick them when done.${NC}"
+    elif [ "$UNCHECKED" -gt 0 ]; then
+        echo -e "${RED}FAIL ($UNCHECKED/$TOTAL unchecked criteria)${NC}"
+        echo -e "${YELLOW}  Fix: Complete all acceptance criteria checkboxes in Linear.${NC}"
+    else
+        echo -e "${GREEN}PASS ($CHECKED/$TOTAL checked)${NC}"
+        GATES_PASSED=$((GATES_PASSED + 1))
+    fi
+fi
+
+# ── Result ──
+
+echo ""
+echo "========================================"
+
+if [ "$GATES_PASSED" -eq "$GATES_TOTAL" ]; then
+    echo -e "${GREEN}  ALL GATES PASSED ($GATES_PASSED/$GATES_TOTAL)${NC}"
+    echo "  Issue $ISSUE_ID is ready to close."
+    echo "========================================"
+    echo ""
+
+    # ── Build evidence ──
+
+    COMMIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+    COMMIT_FULL=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
+    BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")
+    REPO_URL=$(git remote get-url origin 2>/dev/null | sed 's/\.git$//' | sed 's|git@github.com:|https://github.com/|' || echo "")
+    TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    COMMIT_AUTHOR=$(git log -1 --format='%an <%ae>' 2>/dev/null || echo "unknown")
+    COMMIT_DATE=$(git log -1 --format='%ci' 2>/dev/null || echo "unknown")
+    COMMIT_MSG=$(git log -1 --format='%s' 2>/dev/null || echo "unknown")
+
+    # Diff stats — try branch diff first, then last commit, then PR files
+    DIFF_STAT=$(git diff --stat main...HEAD 2>/dev/null || echo "")
+    FILES_CHANGED=$(git diff --name-status main...HEAD 2>/dev/null || echo "")
+
+    # If on main (post-merge), try last merge commit
+    if [ -z "$DIFF_STAT" ] || [ "$BRANCH" = "main" ]; then
+        MERGE_COMMIT=$(git log -1 --merges --format='%H' 2>/dev/null || echo "")
+        if [ -n "$MERGE_COMMIT" ]; then
+            DIFF_STAT=$(git diff --stat "${MERGE_COMMIT}^...${MERGE_COMMIT}" 2>/dev/null || echo "")
+            FILES_CHANGED=$(git diff --name-status "${MERGE_COMMIT}^...${MERGE_COMMIT}" 2>/dev/null || echo "")
+        fi
+    fi
+
+    # Fallback: last commit
+    if [ -z "$DIFF_STAT" ]; then
+        DIFF_STAT=$(git diff --stat HEAD~1 2>/dev/null || echo "No diff available")
+        FILES_CHANGED=$(git diff --name-status HEAD~1 2>/dev/null || echo "")
+    fi
+
+    FILES_COUNT=$(echo "$FILES_CHANGED" | grep -c '.' 2>/dev/null || echo "0")
+
+    # Test results
+    TEST_OUTPUT=$(bash -c "$TEST_CMD" 2>&1 || true)
+    TESTS_PASSED=$(echo "$TEST_OUTPUT" | grep -oE '[0-9]+ passed' || echo "unknown")
+    TESTS_FAILED=$(echo "$TEST_OUTPUT" | grep -oE '[0-9]+ failed' || echo "0 failed")
+
+    # CI run info
+    CI_STATUS_TEXT="unknown"
+    CI_RUN_LINK=""
+    if command -v gh &>/dev/null && [ -n "$REPO_URL" ]; then
+        CI_RUN_JSON=$(gh run list --workflow "$CI_WORKFLOW" --branch "$BRANCH" --limit 1 --json databaseId,conclusion 2>/dev/null || echo "[]")
+        CI_RUN_ID=$(echo "$CI_RUN_JSON" | "$PY" -c "import sys,json; d=json.load(sys.stdin); print(d[0]['databaseId'] if d else '')" 2>/dev/null || echo "")
+        CI_STATUS_TEXT=$(echo "$CI_RUN_JSON" | "$PY" -c "import sys,json; d=json.load(sys.stdin); print(d[0].get('conclusion','unknown') if d else 'unknown')" 2>/dev/null || echo "unknown")
+        if [ -n "$CI_RUN_ID" ]; then
+            CI_RUN_LINK="[CI Run #${CI_RUN_ID}](${REPO_URL}/actions/runs/${CI_RUN_ID})"
+        fi
+    fi
+
+    # PR info
+    PR_LINK=""
+    if command -v gh &>/dev/null; then
+        PR_JSON=$(gh pr list --state merged --head "$BRANCH" --json number,title --jq '.[0]' 2>/dev/null || echo "")
+        if [ -n "$PR_JSON" ] && [ "$PR_JSON" != "null" ]; then
+            PR_NUM=$(echo "$PR_JSON" | "$PY" -c "import sys,json; print(json.load(sys.stdin).get('number',''))" 2>/dev/null || echo "")
+            PR_TITLE=$(echo "$PR_JSON" | "$PY" -c "import sys,json; print(json.load(sys.stdin).get('title',''))" 2>/dev/null || echo "")
+            if [ -n "$PR_NUM" ]; then
+                PR_LINK="[PR #${PR_NUM}: ${PR_TITLE}](${REPO_URL}/pull/${PR_NUM})"
+            fi
+        fi
+    fi
+
+    # Acceptance criteria count
+    ISSUE_FULL=$("$PY" "$SCRIPT_DIR/linear_client.py" get "$ISSUE_ID" --full 2>/dev/null || echo "")
+    AC_CHECKED=$(echo "$ISSUE_FULL" | grep -ci '\- \[x\]' || true)
+    AC_TOTAL=$((AC_CHECKED + $(echo "$ISSUE_FULL" | grep -c '\- \[ \]' || true)))
+
+    # Build markdown evidence
+    EVIDENCE="## Evidencia de cierre — ${ISSUE_ID}
+
+### 1. Resolución
+
+- **Status**: PASS
+- **Fecha**: ${TIMESTAMP}
+- **Verificado por**: Harness enforcement (${GATES_PASSED}/${GATES_TOTAL} gates)
+
+### 2. Cambios implementados
+
+- **Commit**: \`${COMMIT_SHA}\`
+- **Autor**: ${COMMIT_AUTHOR}
+- **Fecha commit**: ${COMMIT_DATE}
+- **Mensaje**: ${COMMIT_MSG}
+$([ -n "$PR_LINK" ] && echo "- **PR**: ${PR_LINK}" || true)
+
+**Diff stats**
+
+\`\`\`
+${DIFF_STAT}
+\`\`\`
+
+**Archivos modificados (${FILES_COUNT})**
+
+\`\`\`
+${FILES_CHANGED}
+\`\`\`
+
+### 3. Verificación — Tests
+
+- **Resultado**: ${TESTS_PASSED}, ${TESTS_FAILED}
+
+### 4. Quality Gates
+
+- **Gate 1 — Tests**: PASS (${TESTS_PASSED})
+- **Gate 2 — CI/CD**: ${CI_STATUS_TEXT}$([ -n "$CI_RUN_LINK" ] && echo " — ${CI_RUN_LINK}" || true)
+- **Gate 3 — Acceptance Criteria**: PASS (${AC_CHECKED}/${AC_TOTAL} checked)
+
+### 5. Audit Trail
+
+- **Issue**: ${ISSUE_ID}
+- **Action**: Closed with automated evidence
+- **Timestamp**: ${TIMESTAMP}
+- **Tool**: scripts/close_issue.sh
+- **Commit SHA**: \`${COMMIT_SHA}\`
+
+---
+*Evidencia generada automáticamente por el harness.*"
+
+    "$PY" "$SCRIPT_DIR/linear_client.py" comment "$ISSUE_ID" "$EVIDENCE" >/dev/null \
+        || env_broken "could not post the evidence comment to Linear"
+
+    # Move to Done
+    "$PY" "$SCRIPT_DIR/linear_client.py" move "$ISSUE_ID" "Done" >/dev/null \
+        || env_broken "could not move $ISSUE_ID to Done in Linear"
+
+    echo "Evidence posted and issue moved to Done."
+
+    # ── Obsidian vault note + agent metrics (best effort, never blocks the close) ──
+    # Context: env HDD_AGENT / HDD_PARENT / HDD_TASK_TYPE if set, else the parent note's assignment table.
+    REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+    VAULT_DIR="$REPO_ROOT/.claude/vault"
+    mkdir -p "$VAULT_DIR/_metrics"
+    ISSUE_JSON=$("$PY" "$SCRIPT_DIR/linear_client.py" get "$ISSUE_ID" --json 2>/dev/null || echo "{}")
+    ISSUE_TITLE=$(echo "$ISSUE_JSON" | "$PY" -c "import sys,json; print(json.load(sys.stdin).get('title',''))" 2>/dev/null || echo "")
+    PARENT="${HDD_PARENT:-$(echo "$ISSUE_JSON" | "$PY" -c "import sys,json; print((json.load(sys.stdin).get('parent') or {}).get('identifier',''))" 2>/dev/null || echo "")}"
+    AGENT="${HDD_AGENT:-}"
+    TASK_TYPE="${HDD_TASK_TYPE:-}"
+    # Without env context, read the assignment /plan-feature wrote in the parent note:
+    #   | [[ISSUE-ID]] | agent-developer | feat |
+    PARENT_NOTE="$VAULT_DIR/$PARENT.md"
+    if { [ -z "$AGENT" ] || [ -z "$TASK_TYPE" ]; } && [ -n "$PARENT" ] && [ -f "$PARENT_NOTE" ]; then
+        ROW=$(grep -F "[[$ISSUE_ID]]" "$PARENT_NOTE" | grep '^|' | head -1 || true)
+        ROW_AGENT=$(echo "$ROW" | awk -F'|' '{gsub(/^ +| +$/, "", $3); print $3}')
+        ROW_TYPE=$(echo "$ROW" | awk -F'|' '{gsub(/^ +| +$/, "", $4); print $4}')
+        AGENT="${AGENT:-$ROW_AGENT}"
+        TASK_TYPE="${TASK_TYPE:-$ROW_TYPE}"
+    fi
+    AGENT="${AGENT:-unassigned}"
+    TASK_TYPE="${TASK_TYPE:-$(echo "$BRANCH" | cut -d/ -f1)}"
+    if [ "$ATTEMPTS" -eq 1 ]; then GATES_FIRST_TRY=true; else GATES_FIRST_TRY=false; fi
+    PR_FM=""
+    [ -n "${PR_NUM:-}" ] && PR_FM="#${PR_NUM}"
+    NOTE="$VAULT_DIR/$ISSUE_ID.md"
+
+    if [ -f "$NOTE" ]; then
+        # Existing note (e.g. the feature parent written by /plan-feature): append, never overwrite.
+        {
+            echo ""
+            echo "## Cierre — ${TIMESTAMP}"
+            echo "- Gates: ${GATES_PASSED}/${GATES_TOTAL} (intentos: ${ATTEMPTS}) · Agente: ${AGENT} · PR: ${PR_FM:-n/a}"
+        } >> "$NOTE"
+    else
+        {
+            echo "---"
+            echo "issue: ${ISSUE_ID}"
+            echo "parent: ${PARENT:-null}"
+            echo "agente: ${AGENT}"
+            echo "fecha: ${TIMESTAMP}"
+            echo "pr: ${PR_FM:-null}"
+            echo "gates: \"${GATES_PASSED}/${GATES_TOTAL} (tests, ci, criteria)\""
+            echo "intentos: ${ATTEMPTS}"
+            echo "---"
+            echo ""
+            echo "# ${ISSUE_ID} — ${ISSUE_TITLE:-$COMMIT_MSG}"
+            echo ""
+            [ -n "$PARENT" ] && echo "Feature: [[${PARENT}]]"
+            [ -n "$PR_LINK" ] && echo "PR: ${PR_LINK}"
+            echo "Commit: \`${COMMIT_SHA}\`"
+        } > "$NOTE"
+    fi
+    echo "Vault note: .claude/vault/$ISSUE_ID.md"
+
+    "$PY" "$SCRIPT_DIR/agent_performance_log.py" record "$ISSUE_ID"         ${PARENT:+--parent "$PARENT"} --agent "$AGENT" --task-type "$TASK_TYPE"         --gates-first-try "$GATES_FIRST_TRY" --branch "$BRANCH"         || echo "WARNING: agent metrics were NOT recorded (the close itself succeeded)" >&2
+
+    rm -f "$ATTEMPTS_DIR/$ISSUE_ID" 2>/dev/null || true
+    exit 0
+else
+    echo -e "${RED}  BLOCKED ($GATES_PASSED/$GATES_TOTAL passed)${NC}"
+    echo "  Fix the failing gates and run again."
+    echo "========================================"
+    exit 1
+fi
